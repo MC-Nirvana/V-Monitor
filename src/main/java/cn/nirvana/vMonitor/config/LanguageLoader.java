@@ -39,49 +39,79 @@ public class LanguageLoader {
     }
 
     public void loadLanguage() {
-        if (this.configFileLoader.getConfig() == null || this.configFileLoader.getConfig().isEmpty()) {
-            this.language = new HashMap<>();
-            return;
-        }
-        String defaultLang = this.configFileLoader.getString("language.default", "en_us");
-        File langFile = new File(dataDirectory.toFile(), langFolderName + File.separator + defaultLang + ".yml");
-        if (!langFile.exists()) {
-            try {
-                langFile.getParentFile().mkdirs();
-                String resourceLangPath = "/lang/" + defaultLang + ".yml";
-                InputStream defaultLangStream = getClass().getResourceAsStream(resourceLangPath);
-                if (defaultLangStream == null) {
-                    resourceLangPath = "/lang/en_us.yml";
-                    defaultLangStream = getClass().getResourceAsStream(resourceLangPath);
-                    if (defaultLangStream == null) {
-                        this.language = new HashMap<>();
-                        return;
-                    }
-                    Files.copy(defaultLangStream, langFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                } else {
-                    Files.copy(defaultLangStream, langFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                }
-            } catch (IOException e) {
-                logger.error("Could not create language file {}: {}", langFile.getName(), e.getMessage(), e);
+        String defaultLang = this.configFileLoader.getString("language.default");
+        String langFileName = defaultLang + ".yml";
+        File langFile = new File(dataDirectory.toFile(), langFolderName + File.separator + langFileName);
+        Path langFilePath = langFile.toPath();
+        boolean langFileExists = Files.exists(langFilePath);
+        if (!langFileExists) {
+            logger.info("Language file '" + langFileName + "' not found, creating a new one from JAR resource.");
+            if (!copyDefaultFile("/lang/" + langFileName, langFilePath)) {
+                logger.error("Failed to create default language file '" + langFileName + "'. This likely indicates a missing resource in the plugin JAR.");
                 this.language = new HashMap<>();
                 return;
             }
+            logger.info("Default language file '" + langFileName + "' created successfully.");
         }
-        LoaderOptions loaderOptions = new LoaderOptions();
-        Yaml yaml = new Yaml(new Constructor(Map.class, loaderOptions));
         try (InputStreamReader reader = new InputStreamReader(new FileInputStream(langFile), StandardCharsets.UTF_8)) {
+            LoaderOptions loaderOptions = new LoaderOptions();
+            Yaml yaml = new Yaml(new Constructor(Map.class, loaderOptions));
             Map<String, Object> loadedData = yaml.load(reader);
-            if (loadedData == null) {
-                this.language = new HashMap<>();
-            } else {
+            if (loadedData != null && !loadedData.isEmpty()) {
                 this.language = loadedData;
+                logger.info("Successfully loaded language file: " + langFileName);
+            } else {
+                logger.warn("Language file '" + langFileName + "' is empty or invalid. Restoring default.");
+                throw new RuntimeException("Language file empty or invalid.");
+            }
+        } catch (Exception e) {
+            logger.error("Error processing language file '" + langFileName + "': " + e.getMessage() + ". Renaming and restoring default.");
+            renameAndCopyDefault(langFilePath, langFileName + ".err", "/lang/" + defaultLang + ".yml");
+            try (InputStreamReader newReader = new InputStreamReader(new FileInputStream(langFile), StandardCharsets.UTF_8)) {
+                LoaderOptions loaderOptions = new LoaderOptions();
+                Yaml yaml = new Yaml(new Constructor(Map.class, loaderOptions));
+                Map<String, Object> reloadedData = yaml.load(newReader);
+                if (reloadedData != null && !reloadedData.isEmpty()) {
+                    this.language = reloadedData;
+                    logger.info("Successfully loaded the restored default language file.");
+                } else {
+                    logger.error("Failed to load the restored default language file. Plugin might have missing translations.");
+                    this.language = new HashMap<>();
+                }
+            } catch (Exception ex) {
+                logger.error("Critical: Failed to load language even after restoration attempt: " + ex.getMessage());
+                this.language = new HashMap<>();
+            }
+        }
+    }
+
+    private boolean copyDefaultFile(String resourcePath, Path targetPath) {
+        try {
+            Files.createDirectories(targetPath.getParent());
+            try (InputStream defaultStream = getClass().getResourceAsStream(resourcePath)) {
+                if (defaultStream == null) {
+                    logger.error("Could not find language resource '" + resourcePath + "' in JAR. This is a plugin packaging error. Please check your JAR file.");
+                    return false;
+                }
+                Files.copy(defaultStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                return true;
             }
         } catch (IOException e) {
-            logger.error("Could not load language file '{}': {}", langFile.getName(), e.getMessage(), e);
-            this.language = new HashMap<>();
-        } catch (Exception e) {
-            logger.error("Error parsing language file '{}': {}", langFile.getName(), e.getMessage(), e);
-            this.language = new HashMap<>();
+            logger.error("Failed to copy language file from JAR '" + resourcePath + "' to '" + targetPath + "': " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void renameAndCopyDefault(Path originalPath, String newSuffix, String resourcePath) {
+        try {
+            Path errorPath = originalPath.resolveSibling(originalPath.getFileName().toString() + newSuffix);
+            Files.move(originalPath, errorPath, StandardCopyOption.REPLACE_EXISTING);
+            logger.warn("Renamed corrupted language file to: " + errorPath.getFileName());
+            if (!copyDefaultFile(resourcePath, originalPath)) {
+                logger.error("Failed to copy a new default language file during restoration. This is critical!");
+            }
+        } catch (IOException e) {
+            logger.error("Failed to rename or copy default language file for restoration: " + e.getMessage());
         }
     }
 

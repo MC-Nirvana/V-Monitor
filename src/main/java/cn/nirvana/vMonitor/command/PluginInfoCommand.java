@@ -72,7 +72,7 @@ public class PluginInfoCommand {
                     return SINGLE_SUCCESS;
                 });
         LiteralCommandNode<CommandSource> infoNode = BrigadierCommand.literalArgumentBuilder("info")
-                .requires(source -> source.hasPermission("vmonitor.plugin.info"))
+                .requires(source -> source.hasPermission("vmonitor.plugin"))
                 .executes(context -> {
                     context.getSource().sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.plugin.usage.info")));
                     return SINGLE_SUCCESS;

@@ -20,13 +20,13 @@ commands:
   version:
     format: |
       
-      <gold><bold>V-Monitor - V1.2.0 (Author: MC-Nirvana)</bold></gold>
+      <gold><bold>V-Monitor - Author: MC-Nirvana</bold></gold>
       <aqua>/vm help</aqua> <white>-</white> <green>Get overall plugin help information.</green>
 
   help:
     all_format: |
       
-      <gold><bold>V-Monitor - V1.2.0 Help:</bold></gold>
+      <gold><bold>V-Monitor - Help:</bold></gold>
       <aqua>/vm help</aqua> <white>-</white> <green>Get overall plugin help information.</green>
       <aqua>/vm reload</aqua> <white>-</white> <green>Reload plugin configuration.</green>
       <aqua>/vm server list [all|server_name]</aqua> <white>-</white> <green>List players on all or specified servers.</green>
@@ -36,13 +36,13 @@ commands:
 
     server_format: |
       
-      <gold><bold>V-Monitor - V1.2.0 Help:</bold></gold>
+      <gold><bold>V-Monitor - Help:</bold></gold>
       <aqua>/vm server list [all|server_name]</aqua> <white>-</white> <green>List players on all or specified servers.</green>
       <aqua>/vm server info [all|server_name]</aqua> <white>-</white> <green>Get detailed information for all or specified servers.</green>
 
     plugin_format: |
       
-      <gold><bold>V-Monitor - V1.2.0 Help:</bold></gold>
+      <gold><bold>V-Monitor - Help:</bold></gold>
       <aqua>/vm plugin list</aqua> <white>-</white> <green>List all loaded plugins.</green>
       <aqua>/vm plugin info [all|plugin_id]</aqua> <white>-</white> <green>Get detailed information for all or specified plugins.</green>
 

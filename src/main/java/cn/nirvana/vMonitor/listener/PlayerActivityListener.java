@@ -57,38 +57,42 @@ public class PlayerActivityListener {
                     proxyServer.sendMessage(component);
                 }
             }
-        }).delay(1, TimeUnit.SECONDS).schedule();
+        }).delay(500, TimeUnit.MILLISECONDS).schedule();
     }
 
     @Subscribe
     public void onPlayerDisconnect(DisconnectEvent event) {
         Player player = event.getPlayer();
-        String leaveMessage = languageLoader.getMessage("player_activity.leave");
-        if (leaveMessage != null && !leaveMessage.isEmpty()) {
-            Component component = miniMessage.deserialize(leaveMessage.replace("{player}", player.getUsername()));
-            proxyServer.sendMessage(component);
-        }
+        proxyServer.getScheduler().buildTask(plugin, () -> {
+            String leaveMessage = languageLoader.getMessage("player_activity.leave");
+            if (leaveMessage != null && !leaveMessage.isEmpty()) {
+                Component component = miniMessage.deserialize(leaveMessage.replace("{player}", player.getUsername()));
+                proxyServer.sendMessage(component);
+            }
+        }).delay(500, TimeUnit.MILLISECONDS).schedule();
     }
 
     @Subscribe
     public void onServerConnected(ServerConnectedEvent event) {
         Player player = event.getPlayer();
-        String fromServerRawName = event.getPreviousServer()
-                .map(serverConnection -> serverConnection.getServerInfo().getName())
-                .orElse(null);
-        String toServerRawName = event.getServer().getServerInfo().getName();
-        if (fromServerRawName != null) {
-            String fromServerDisplayName = configFileLoader.getServerDisplayName(fromServerRawName);
-            String toServerDisplayName = configFileLoader.getServerDisplayName(toServerRawName);
-            String switchMessage = languageLoader.getMessage("player_activity.switch");
+        proxyServer.getScheduler().buildTask(plugin, () -> {
+            String fromServerRawName = event.getPreviousServer()
+                    .map(serverConnection -> serverConnection.getServerInfo().getName())
+                    .orElse(null);
+            String toServerRawName = event.getServer().getServerInfo().getName();
+            if (fromServerRawName != null) {
+                String fromServerDisplayName = configFileLoader.getServerDisplayName(fromServerRawName);
+                String toServerDisplayName = configFileLoader.getServerDisplayName(toServerRawName);
+                String switchMessage = languageLoader.getMessage("player_activity.switch");
 
-            if (switchMessage != null && !switchMessage.isEmpty()) {
-                Component component = miniMessage.deserialize(switchMessage
-                        .replace("{player}", player.getUsername())
-                        .replace("{from}", fromServerDisplayName)
-                        .replace("{to}", toServerDisplayName));
-                proxyServer.sendMessage(component);
+                if (switchMessage != null && !switchMessage.isEmpty()) {
+                    Component component = miniMessage.deserialize(switchMessage
+                            .replace("{player}", player.getUsername())
+                            .replace("{from}", fromServerDisplayName)
+                            .replace("{to}", toServerDisplayName));
+                    proxyServer.sendMessage(component);
+                }
             }
-        }
+        }).delay(500, TimeUnit.MILLISECONDS).schedule();
     }
 }

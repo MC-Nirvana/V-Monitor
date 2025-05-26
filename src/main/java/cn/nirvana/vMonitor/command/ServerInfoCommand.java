@@ -92,7 +92,7 @@ public class ServerInfoCommand {
                     onlinePlayers = players.getOnline();
                     maxPlayers = players.getMax();
                 }
-                String infoMessage = languageLoader.getMessage("commands.server.info.specific_format") // specific_format 现在包含了 header
+                String infoMessage = languageLoader.getMessage("commands.server.info.specific_format")
                         .replace("{server_name}", serverNameArg)
                         .replace("{server_display_name}", serverDisplayName)
                         .replace("{version}", version)

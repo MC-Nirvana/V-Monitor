@@ -20,13 +20,13 @@ commands:
   version:
     format: | 
       
-      <gold><bold>V-Monitor - V1.2.0（作者：MC-Nirvana）</bold></gold>
+      <gold><bold>V-Monitor - 作者：MC-Nirvana</bold></gold>
       <aqua>/vm help</aqua> <white>-</white> <green>获取插件总帮助信息。</green>
 
   help:
     all_format: |
       
-      <gold><bold>V-Monitor - V1.2.0 帮助:</bold></gold>
+      <gold><bold>V-Monitor - 帮助:</bold></gold>
       <aqua>/vm help</aqua> <white>-</white> <green>获取插件总帮助信息。</green>
       <aqua>/vm reload</aqua> <white>-</white> <green>重载插件配置。</green>
       <aqua>/vm server list [all|服务器名称]</aqua> <white>-</white> <green>列出所有或指定服务器上的玩家。</green>
@@ -36,13 +36,13 @@ commands:
 
     server_format: |
       
-      <gold><bold>V-Monitor - V1.2.0 帮助:</bold></gold>
+      <gold><bold>V-Monitor - 帮助:</bold></gold>
       <aqua>/vm server list [all|服务器名称]</aqua> <white>-</white> <green>列出所有或指定服务器上的玩家。</green>
       <aqua>/vm server info [all|服务器名称]</aqua> <white>-</white> <green>获取所有或指定服务器的详细信息。</green>
 
     plugin_format: |
       
-      <gold><bold>V-Monitor - V1.2.0 帮助:</bold></gold>
+      <gold><bold>V-Monitor - 帮助:</bold></gold>
       <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加载插件。</green>
       <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>获取所有或指定插件的详细信息。</green>
 

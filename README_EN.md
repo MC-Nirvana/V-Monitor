@@ -26,14 +26,14 @@ V-Monitor is a lightweight Velocity proxy plugin (Internal development code: Aro
 ## IV. Plugin Usage (Commands)
 The plugin's main command is `/vmonitor`, with the alias `/vm`.
 
-| Command                            | Usage Example                                       | Permission Node        | Description                                            |
-|:-----------------------------------|:----------------------------------------------------|:-----------------------|:-------------------------------------------------------|
-| `help`                             | `/vm help`                                          | `none`                 | Get general plugin help information.                   |
-| `reload`                           | `/vm reload`                                        | `vmonitor.reload`      | Reload configuration and language files.               |
-| `server list [all or server_name]` | `/vm server list all` / `/vm server list lobby`     | `none`                 | List players on all or specified servers.              |
-| `server info [all or server_name]` | `/vm server info all` / `/vm server info lobby`     | `none`                 | Get detailed information for all or specified servers. |
-| `plugin list`                      | `/vm plugin list`                                   | `vmonitor.plugin.list` | List all loaded plugins.                               |
-| `plugin info [all or plugin_id]`   | `/vm plugin info all` / `/vm plugin info V-Monitor` | `vmonitor.plugin.info` | Get detailed information for all or specified plugins. |
+| Command                            | Usage Example                                        | Permission Node   | Description                                            |
+|:-----------------------------------|:-----------------------------------------------------|:------------------|:-------------------------------------------------------|
+| `help`                             | `/vm help`                                           | `none`            | Get general plugin help information.                   |
+| `reload`                           | `/vm reload`                                         | `vmonitor.reload` | Reload configuration and language files.               |
+| `server list [all or server_name]` | `/vm server list all` or `/vm server list lobby`     | `none`            | List players on all or specified servers.              |
+| `server info [all or server_name]` | `/vm server info all` or `/vm server info lobby`     | `none`            | Get detailed information for all or specified servers. |
+| `plugin list`                      | `/vm plugin list`                                    | `vmonitor.plugin` | List all loaded plugins.                               |
+| `plugin info [all or plugin_id]`   | `/vm plugin info all` or `/vm plugin info V-Monitor` | `vmonitor.plugin` | Get detailed information for all or specified plugins. |
 
 *By default, players with OP permission and the console have all permission nodes.*
 

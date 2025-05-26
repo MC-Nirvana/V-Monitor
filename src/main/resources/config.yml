@@ -1,6 +1,10 @@
 # V-Monitor Configuration
 
 # Default language（默认语言设置）
+# Current Supported Languages:
+# zh_cn (Simplified Chinese)
+# zh_tw (Traditional Chinese)
+# en_us (English)
 language:
   default: "zh_cn"
 

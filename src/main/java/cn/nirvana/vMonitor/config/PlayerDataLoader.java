@@ -3,23 +3,30 @@ package cn.nirvana.vMonitor.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+
 import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.UUID;
-import java.util.Map;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.InputStream;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
+
+import java.util.HashMap;
+import java.util.UUID;
+import java.util.Map;
 import java.util.Date;
+
+import java.text.SimpleDateFormat;
 
 public class PlayerDataLoader {
     private final Logger logger;
@@ -48,44 +55,74 @@ public class PlayerDataLoader {
 
     public void loadPlayerData() {
         File playerDataFile = new File(dataDirectory.toFile(), playerDataFileName);
-        if (!playerDataFile.exists()) {
-            try {
-                playerDataFile.getParentFile().mkdirs();
-                if (playerDataFile.createNewFile()) {
-                    savePlayerData();
-                    logger.info("Player data file created: {}", playerDataFile.getAbsolutePath());
-                }
-            } catch (IOException e) {
-                logger.error("Could not create player data file ", e);
-            }
-            if (this.playerData == null) {
+        Path playerFilePath = playerDataFile.toPath();
+        boolean playerFileExists = Files.exists(playerFilePath);
+        if (!playerFileExists) {
+            logger.info("Player data file not found, creating a new one.");
+            if (!createEmptyPlayerDataFile(playerFilePath)) {
+                logger.error("Failed to create empty player data file. Plugin might not be able to save player data.");
+                this.playerData = new HashMap<>();
+            } else {
+                logger.info("Empty player data file created successfully.");
                 this.playerData = new HashMap<>();
             }
             return;
         }
         try (InputStreamReader reader = new InputStreamReader(new FileInputStream(playerDataFile), StandardCharsets.UTF_8)) {
             Gson gson = new Gson();
-            java.lang.reflect.Type type = new TypeToken<HashMap<UUID, PlayerFirstJoinInfo>>() {
-            }.getType();
+            java.lang.reflect.Type type = new TypeToken<HashMap<UUID, PlayerFirstJoinInfo>>() {}.getType();
             HashMap<UUID, PlayerFirstJoinInfo> loadedData = gson.fromJson(reader, type);
             if (loadedData != null) {
                 this.playerData.clear();
                 this.playerData.putAll(loadedData);
+                logger.info("Successfully loaded player data file.");
             } else {
-                this.playerData = new HashMap<>();
-                logger.warn("Player data file is empty or invalid: {}", playerDataFile.getName());
-            }
-            logger.info("Successfully loaded player data file");
-        } catch (IOException e) {
-            logger.error("Could not load player data file ", e);
-            if (this.playerData == null) {
-                this.playerData = new HashMap<>();
+                logger.warn("Player data file is empty or invalid. Restoring default (empty data).");
+                throw new RuntimeException("Player data file empty or invalid.");
             }
         } catch (Exception e) {
-            logger.error("Error parsing player data file ", e);
-            if (this.playerData == null) {
+            logger.error("Error processing player data file '" + playerDataFileName + "': " + e.getMessage() + ". Renaming and restoring default.");
+            renameAndCopyDefault(playerFilePath, playerDataFileName + ".err");
+            try (InputStreamReader newReader = new InputStreamReader(new FileInputStream(playerDataFile), StandardCharsets.UTF_8)) {
+                Gson gson = new Gson();
+                java.lang.reflect.Type type = new TypeToken<HashMap<UUID, PlayerFirstJoinInfo>>() {}.getType();
+                HashMap<UUID, PlayerFirstJoinInfo> reloadedData = gson.fromJson(newReader, type);
+                if (reloadedData != null) {
+                    this.playerData = reloadedData;
+                    logger.info("Successfully loaded the restored default (empty) player data file.");
+                } else {
+                    logger.error("Failed to load the restored default (empty) player data file. Plugin might not be able to save player data.");
+                    this.playerData = new HashMap<>();
+                }
+            } catch (Exception ex) {
+                logger.error("Critical: Failed to load player data even after restoration attempt: " + ex.getMessage());
                 this.playerData = new HashMap<>();
             }
+        }
+    }
+
+    private boolean createEmptyPlayerDataFile(Path targetPath) {
+        try {
+            Files.createDirectories(targetPath.getParent());
+            try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(targetPath.toFile()), StandardCharsets.UTF_8)) {
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                gson.toJson(new HashMap<UUID, PlayerFirstJoinInfo>(), writer);
+            }
+            return true;
+        } catch (IOException e) {
+            logger.error("Failed to create empty player data file at '" + targetPath + "': " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void renameAndCopyDefault(Path originalPath, String newSuffix) {
+        try {
+            Path errorPath = originalPath.resolveSibling(originalPath.getFileName().toString() + newSuffix);
+            Files.move(originalPath, errorPath, StandardCopyOption.REPLACE_EXISTING);
+            logger.warn("Renamed corrupted player data file to: " + errorPath.getFileName());
+            createEmptyPlayerDataFile(originalPath);
+        } catch (IOException e) {
+            logger.error("Failed to rename or create default player data file for restoration: " + e.getMessage());
         }
     }
 
@@ -97,9 +134,9 @@ public class PlayerDataLoader {
                 this.playerData = new HashMap<>();
             }
             gson.toJson(this.playerData, writer);
-            logger.debug("Successfully saved player data file");
+            logger.debug("Successfully saved player data file.");
         } catch (IOException e) {
-            logger.error("Could not save player data file ", e);
+            logger.error("Could not save player data file: " + e.getMessage());
         }
     }
 

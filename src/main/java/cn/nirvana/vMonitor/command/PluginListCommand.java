@@ -41,7 +41,7 @@ public class PluginListCommand {
 
     private void registerPluginListCommand() {
         LiteralCommandNode<CommandSource> listNode = BrigadierCommand.literalArgumentBuilder("list")
-                .requires(source -> source.hasPermission("vmonitor.plugin.list"))
+                .requires(source -> source.hasPermission("vmonitor.plugin"))
                 .executes(context -> {
                     execute(context.getSource());
                     return SINGLE_SUCCESS;

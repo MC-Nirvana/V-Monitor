@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 
 import java.nio.file.Path;
 
-@Plugin(id = "v-monitor", name = "V-Monitor", version = "1.2.0", url = "https://github.com/MC-Nirvana/V-Monitor", description = "Monitor the player's activity status", authors = {"MC-Nirvana"})
+@Plugin(id = "v-monitor", name = "V-Monitor", version = "1.2.1", url = "https://github.com/MC-Nirvana/V-Monitor", description = "Monitor the player's activity status", authors = {"MC-Nirvana"})
 public final class VMonitor {
     private final ProxyServer proxyServer;
     private final Logger logger;

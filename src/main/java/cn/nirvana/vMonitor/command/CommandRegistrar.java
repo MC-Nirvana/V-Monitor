@@ -49,9 +49,7 @@ public class CommandRegistrar {
     public void registerCommands() {
         vmonitorRootNode = LiteralArgumentBuilder.<CommandSource>literal("vmonitor")
                 .executes(context -> {
-                    String version = "1.1.1";
-                    Component message = miniMessage.deserialize(languageLoader.getMessage("commands.version.format")
-                            .replace("{version}", version));
+                    Component message = miniMessage.deserialize(languageLoader.getMessage("commands.version.format"));
                     context.getSource().sendMessage(message);
                     return SINGLE_SUCCESS;
                 }).build();
