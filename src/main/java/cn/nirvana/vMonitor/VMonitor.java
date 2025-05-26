@@ -53,7 +53,7 @@ public final class VMonitor {
         languageLoader.loadLanguage();
         playerDataLoader = new PlayerDataLoader(logger, dataDirectory);
         playerDataLoader.loadPlayerData();
-        proxyServer.getEventManager().register(this, new PlayerActivityListener(proxyServer, configFileLoader, languageLoader, playerDataLoader, miniMessage));
+        proxyServer.getEventManager().register(this, new PlayerActivityListener(proxyServer, configFileLoader, languageLoader, playerDataLoader, miniMessage, this));
         commandRegistrar = new CommandRegistrar(commandManager, proxyServer, languageLoader, miniMessage);
         HelpCommand helpCommandInstance = new HelpCommand(languageLoader, miniMessage);
         ReloadCommand reloadCommandInstance = new ReloadCommand(configFileLoader, languageLoader, miniMessage);
