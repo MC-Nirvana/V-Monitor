@@ -26,17 +26,18 @@ V-Monitor 是一个轻量级的 Velocity 代理端插件（内部开发代号：
 ## 四、插件用法 (命令)
 插件的主命令是 `/vmonitor`，别名为 `/vm`。
 
-| 命令                    | 用法示例                 | 权限节点          | 描述                                       |
-| :---------------------- | :----------------------- |:------------------| :----------------------------------------- |
-| `list`                  | `/vm list`               | `none`            | 查看总在线人数和各服务器玩家列表概览。     |
-| `list <服务器名称>`     | `/vm list lobby`         | `none`            | 查看指定服务器在线玩家列表。               |
-| `info`                  | `/vm info`               | `none`            | 查询代理整体信息。                         |
-| `info <服务器名称>`     | `/vm info lobby`         | `none`            | 查询指定服务器详细信息。                   |
-| `reload`                | `/vm reload`             | `vmonitor.reload` | 重载配置文件和语言文件。                   |
+| 命令                           | 用法示例                                            | 权限节点               | 描述                             |
+|:-------------------------------|:----------------------------------------------------|:-----------------------|:---------------------------------|
+| `help`                         | `/vm help`                                          | `none`                 | 获取插件总帮助信息。             |
+| `reload`                       | `/vm reload`                                        | `vmonitor.reload`      | 重载插件配置。                   |
+| `server list [all|服务器名称]` | `/vm server list all` / `/vm server list lobby`     | `none`                 | 列出所有或指定服务器上的玩家。   |
+| `server info [all|服务器名称]` | `/vm server info all` / `/vm server info lobby`     | `none`                 | 获取所有或指定服务器的详细信息。 |
+| `plugin list`                  | `/vm plugin list`                                   | `vmonitor.plugin.list` | 列出所有已加载插件。             |
+| `plugin info [all|插件ID]`     | `/vm plugin info all` / `/vm plugin info V-Monitor` | `vmonitor.plugin.info` | 获取所有或指定插件的详细信息。   |
 
 *默认情况下，拥有 OP 权限的玩家和控制台拥有所有权限节点。*
 
-## 五、配置文件 (config.toml)
+## 五、配置文件 (config.yml)
 插件启动后会在 `plugins/v-monitor/` 目录下生成 `config.toml` 文件。
 
 - `language.default`: 设置插件使用的语言代码 (例如 `en_us`, `zh_cn`, `zh_tw`)。

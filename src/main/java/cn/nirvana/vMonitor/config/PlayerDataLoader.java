@@ -105,7 +105,7 @@ public class PlayerDataLoader {
 
     public void addPlayerFirstJoinInfo(UUID uuid, String playerName) {
         if (!playerData.containsKey(uuid)) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
             String formattedTime = sdf.format(new Date(System.currentTimeMillis()));
             playerData.put(uuid, new PlayerFirstJoinInfo(formattedTime, playerName));
             savePlayerData();
