@@ -7,13 +7,14 @@
 V-Monitor is a lightweight Velocity proxy plugin (Internal development code: Arona-01) focused on monitoring player activity such as joining, leaving, and switching servers, and providing convenient commands for players and administrators to query online player lists and detailed backend server information.
 
 ## II. Key Features
-* **Player Activity Notifications:** Send customizable messages when players join, leave, or switch servers (including first join distinction).
-* **Online Player List Query:** Provides commands to view the total online players on the proxy and an overview of online player lists on each backend server.
-* **Server Information Query:** Provides commands to query the overall proxy information and detailed information for specified backend servers.
-* **Highly Customizable:** All messages and command outputs displayed to players or the console can be fully customized through language files.
-* **Multi-language Support:** Implements multi-language functionality through separate language files.
-* **Server Aliases:** Supports configuring aliases for backend servers.
-* **Data Persistence:** Uses UUIDs to record player's first join information.
+- **Player Activity Notifications:** Send customizable messages when players join, leave, or switch servers (including first join distinction).
+- **Online Player List Query:** Provides commands to view the total online players on the proxy and an overview of online player lists on each backend server.
+- **Server Information Query:** Provides commands to query the overall proxy information and detailed information for specified backend servers.
+- **Plugin Information Query:** Provides commands to query the list of plugins and details of the specified plugin.
+- **Highly Customizable:** All messages and command outputs displayed to players or the console can be fully customized through language files.
+- **Multi-language Support:** Implements multi-language functionality through separate language files.
+- **Server Aliases:** Supports configuring aliases for backend servers.
+- **Data Persistence:** Uses UUIDs to record player's first join information.
 
 ## III. Installation Guide
 1.  Download the latest version of the plugin JAR file from the project's [Release page](https://github.com/MC-Nirvana/V-Monitor/releases/latest).
@@ -27,7 +28,7 @@ V-Monitor is a lightweight Velocity proxy plugin (Internal development code: Aro
 The plugin's main command is `/vmonitor`, with the alias `/vm`.
 
 | Command                            | Usage Example                                        | Permission Node   | Description                                            |
-|:-----------------------------------|:-----------------------------------------------------|:------------------|:-------------------------------------------------------|
+|------------------------------------|------------------------------------------------------|-------------------|--------------------------------------------------------|
 | `help`                             | `/vm help`                                           | `none`            | Get general plugin help information.                   |
 | `reload`                           | `/vm reload`                                         | `vmonitor.reload` | Reload configuration and language files.               |
 | `server list [all or server_name]` | `/vm server list all` or `/vm server list lobby`     | `none`            | List players on all or specified servers.              |
@@ -37,11 +38,11 @@ The plugin's main command is `/vmonitor`, with the alias `/vm`.
 
 *By default, players with OP permission and the console have all permission nodes.*
 
-## V. Configuration File (config.toml)
-After the plugin starts, a `config.toml` file will be generated in the `plugins/v-monitor/` directory.
+## V. Configuration File (config.yml)
+After the plugin starts, a `config.yml` file will be generated in the `plugins/v-monitor/` directory.
 
-* `language.default`: Sets the language code used by the plugin (e.g., `en_us`, `zh_cn`, `zh_tw`).
-* `server-aliases`: In this section, set display aliases for your backend servers, format like `actual server name = "desired display alias"`.
+- `language.default`: Sets the language code used by the plugin (e.g., `en_us`, `zh_cn`, `zh_tw`).
+- `server-aliases`: In this section, set display aliases for your backend servers, format like `actual server name: "desired display alias"`.
 
 You can edit this file to customize the plugin's behavior and message content. Please refer to the file generated upon first plugin run for the full default configuration.
 
