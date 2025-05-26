@@ -14,8 +14,6 @@ import com.velocitypowered.api.proxy.ProxyServer;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
-import com.moandjiezana.toml.Toml;
-
 import java.util.UUID;
 
 public class PlayerActivityListener {
@@ -40,18 +38,18 @@ public class PlayerActivityListener {
         String playerName = player.getUsername();
         boolean isFirstJoin = !playerDataLoader.hasPlayerJoinedBefore(uuid);
         playerDataLoader.addPlayerFirstJoinInfo(uuid, playerName);
-        Toml config = configFileLoader.getConfig();
+
         if (isFirstJoin) {
-            String firstJoinMessage = config.getString("messages.first-join");
+            String firstJoinMessage = languageLoader.getMessage("player_activity.first_join");
             if (firstJoinMessage != null && !firstJoinMessage.isEmpty()) {
                 proxyServer.sendMessage(miniMessage.deserialize(firstJoinMessage.replace("{player}", playerName)));
             }
-            String joinMessage = config.getString("messages.join");
+            String joinMessage = languageLoader.getMessage("player_activity.join");
             if (joinMessage != null && !joinMessage.isEmpty()) {
                 proxyServer.sendMessage(miniMessage.deserialize(joinMessage.replace("{player}", playerName)));
             }
         } else {
-            String joinMessage = config.getString("messages.join");
+            String joinMessage = languageLoader.getMessage("player_activity.join");
             if (joinMessage != null && !joinMessage.isEmpty()) {
                 proxyServer.sendMessage(miniMessage.deserialize(joinMessage.replace("{player}", playerName)));
             }
@@ -61,8 +59,7 @@ public class PlayerActivityListener {
     @Subscribe
     public void onPlayerDisconnect(DisconnectEvent event) {
         Player player = event.getPlayer();
-        Toml config = configFileLoader.getConfig();
-        String leaveMessage = config.getString("messages.leave");
+        String leaveMessage = languageLoader.getMessage("player_activity.leave");
         if (leaveMessage != null && !leaveMessage.isEmpty()) {
             proxyServer.sendMessage(miniMessage.deserialize(leaveMessage.replace("{player}", player.getUsername())));
         }
@@ -71,19 +68,20 @@ public class PlayerActivityListener {
     @Subscribe
     public void onServerConnected(ServerConnectedEvent event) {
         Player player = event.getPlayer();
-        String fromServer = event.getPreviousServer()
+        String fromServerRawName = event.getPreviousServer()
                 .map(serverConnection -> serverConnection.getServerInfo().getName())
-                .orElse(languageLoader.getMessage("unknown-server"));
-        String toServer = event.getServer().getServerInfo().getName();
-        Toml config = configFileLoader.getConfig();
-        String switchMessage = config.getString("messages.switch");
+                .orElse(null);
+        String toServerRawName = event.getServer().getServerInfo().getName();
+        String fromServerDisplayName = (fromServerRawName != null) ?
+                configFileLoader.getServerDisplayName(fromServerRawName) :
+                languageLoader.getMessage("global.unknown_server");
+        String toServerDisplayName = configFileLoader.getServerDisplayName(toServerRawName);
+        String switchMessage = languageLoader.getMessage("player_activity.switch");
         if (switchMessage != null && !switchMessage.isEmpty()) {
-            String displayFromServer = configFileLoader.getServerDisplayName(fromServer);
-            String displayToServer = configFileLoader.getServerDisplayName(toServer);
             proxyServer.sendMessage(miniMessage.deserialize(switchMessage
                     .replace("{player}", player.getUsername())
-                    .replace("{from}", displayFromServer)
-                    .replace("{to}", displayToServer)));
+                    .replace("{from}", fromServerDisplayName)
+                    .replace("{to}", toServerDisplayName)));
         }
     }
 }

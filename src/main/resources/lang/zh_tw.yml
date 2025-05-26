@@ -1,98 +1,134 @@
 # 繁體中文語言文件 for V-Monitor
 
-# 玩家加入/離開/切換伺服器訊息
-join: "<green>{player}</green>加入了伺服器。"
-leave: "<red>{player}</red>離開了伺服器。"
-switch: "<yellow>{player}</yellow>從 <blue>{from}</blue> 切换到了 <aqua>{to}</aqua>。"
-first-join: "<bold><gold>{player}</gold></bold>首次加入伺服器！歡迎！"
-unknown-server: "未知伺服器"
+# 全局消息
+global:
+  no_permission: "<red>您沒有權限使用此命令。</red>"
+  reload_success: "<green>配置重載成功。</green>"
+  unknown_info: "<gray>未知</gray>"
+  unknown_version: "未知版本"
+  unknown_server: "未知伺服器"
 
-# 通用訊息
-server-not-exists: "伺服器 <red>{server}</red> 不存在。"
-no-permission: "<red>您沒有權限使用此命令。</red>"
-reload-success: "<green>配置重載成功。</green>"
-unknown-info: "<gray>未知</gray>"
-usage-server-list: "<gold>請使用: <white>/vm server list <all|server_name></white></gold>"
-usage-server-info: "<gold>請使用: <white>/vm server info <all|server_name></white></gold>"
+# 玩家活動消息
+player_activity:
+  join: "<green>{player}</green>加入了伺服器。"
+  leave: "<red>{player}</red>離開了伺服器。"
+  switch: "<yellow>{player}</yellow>從 <blue>{from}</blue> 切換到了 <aqua>{to}</aqua>。"
+  first_join: "<bold><gold>{player}</gold></bold>首次加入伺服器！歡迎！"
 
-# Help 命令訊息
-help-format: |
-  <gold><bold>V-Monitor - V1.1.0 說明:</bold></gold>
-  <aqua>/vm list [伺服器]</aqua> <white>-</white> <green>查看在線玩家列表 (可指定伺服器)。</green>
-  <aqua>/vm info [伺服器]</aqua> <white>-</white> <green>查詢代理或指定伺服器資訊。</green>
-  <aqua>/vm reload</aqua> <white>-</white> <green>重載插件配置。</green>
-  <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已載入插件。</green>
-  <aqua>/vm plugin info <all|插件ID></aqua> <white>-</white> <green>查詢指定插件的詳細資訊。</green>
+# 命令相關消息
+commands:
+  version:
+    format: |
+      
+      <gold><bold>V-Monitor - V1.2.0（作者：MC-Nirvana）</bold></gold>
+      <aqua>/vm help</aqua> <white>-</white> <green>獲取插件總幫助信息。</green>
 
-# 伺服器列表命令訊息
-list-header: "<gold><bold>在線伺服器列表</bold></gold> - <yellow>總計伺服器: <blue>{server_count}</blue>台</yellow>"
-list-server-header: "<gold><bold>伺服器在線列表</bold></gold> - <yellow>伺服器 <aqua>{server}</aqua> 共計有 <blue>{server_player}</blue> 人在線</yellow>"
-list-server-name: "<aqua>{server_display}</aqua>"
-list-server-player: "<green>{players}</green>"
-list-no-players: "<dark_aqua>暫無玩家</dark_aqua>"
+  help:
+    all_format: |
+      
+      <gold><bold>V-Monitor - V1.2.0 幫助:</bold></gold>
+      <aqua>/vm help</aqua> <white>-</white> <green>獲取插件總幫助信息。</green>
+      <aqua>/vm reload</aqua> <white>-</white> <green>重載插件配置。</green>
+      <aqua>/vm server list [all|伺服器名稱]</aqua> <white>-</white> <green>列出所有或指定伺服器上的玩家。</green>
+      <aqua>/vm server info [all|伺服器名稱]</aqua> <white>-</white> <green>獲取所有或指定伺服器的詳細信息。</green>
+      <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加載插件。</green>
+      <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>獲取所有或指定插件的詳細信息。</green>
 
-# Info 命令訊息
-info-proxy-format: |
-  <gold><bold>目前 Velocity 代理資訊</bold></gold>
-  <yellow>核心版本:</yellow> <green>{proxy_version}</green>
-  <yellow>總計在線人數:</yellow> <blue>{total_player}</blue>人
-  <yellow>伺服器數量:</yellow> <green>{server_count}</green>台
+    server_format: |
+      
+      <gold><bold>V-Monitor - V1.2.0 幫助:</bold></gold>
+      <aqua>/vm server list [all|伺服器名稱]</aqua> <white>-</white> <green>列出所有或指定伺服器上的玩家。</green>
+      <aqua>/vm server info [all|伺服器名稱]</aqua> <white>-</white> <green>獲取所有或指定伺服器的詳細信息。</green>
 
-  <gold><bold>伺服器運行狀態概覽</bold></gold>
-  <yellow>- 正在運行:</yellow> <green>{running_servers}</green>台
-  <yellow>- 未運行:</yellow> <red>{offline_servers}</red>台
+    plugin_format: |
+      
+      <gold><bold>V-Monitor - V1.2.0 幫助:</bold></gold>
+      <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加載插件。</green>
+      <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>獲取所有或指定插件的詳細信息。</green>
 
-  <gold><bold>各子伺服器運行狀態</bold></gold>
-  {server_status_list}
+  server:
+    not_found: "<red>伺服器 {server} 不存在。</red>"
+    unreachable: "<red>無法連接到伺服器 {server}。</red>"
+    usage:
+      list: "<gold>請使用: <white>/vm server list <all|server_name></white></gold>"
+      info: "<gold>請使用: <white>/vm server info <all|server_name></white></gold>"
 
-info-server-detail-format: |
-  <gold><bold>伺服器 {server_name} 資訊</bold></gold>
-  <yellow>伺服器核心:</yellow> {core_name}
-  <yellow>遊戲版本:</yellow> {server_version}
-  <yellow>是否支援Forge/NeoForge:</yellow> {mod_support_status}
-  <yellow>目前在線:</yellow> {online_players}
-  <yellow>伺服器MOTD:</yellow>
-  <reset>{motd}</reset>
+    list:
+      all_format: |
+        
+        <gold>--- <yellow>全服在線玩家列表</yellow> <gold>---
+        <gold>全服共計有</gold> <aqua>{online_players_count}</aqua> <gold>名玩家在線。</gold>
+        {all_players_list}
+      specific_format: |
+        
+        <gold>--- <yellow>伺服器 {server_display_name} 上的在線玩家列表</yellow> <gold>---
+        <gold>伺服器</gold> <yellow>{server_display_name}</yellow> <gold>共計有</gold> <aqua>{online_players_number}</aqua> <gold>名玩家在線。</gold>
+        {specific_players_list}
+      no_players_online_info: "<gray>此伺服器暫無玩家在線。</gray>"
 
-info-server-status-running-short: "<green>正在運行</green>"
-info-server-status-offline-short: "<red>未運行</red>"
-info-server-unreachable: "<red>無法連線</red>"
-info-server-mod-support-yes: "<green>是</green>"
-info-server-mod-support-no: "<red>否</red>"
-info-server-player-names: "<green>{players}</green>"
-info-server-no-players: "<gray>暫無玩家在線</gray>"
+    info:
+      all_format: |
+        
+        <gold>--- <yellow>Velocity 實例概覽</yellow> <gold>---
+        <yellow>核心版本:</yellow> <green>{proxy_version}</green>
+        <yellow>總計在線人數:</yellow> <blue>{total_player}</blue>人
+        <yellow>伺服器數量:</yellow> <green>{server_count}</green>台
 
-# 插件命令訊息
-usage-plugin: "<yellow>請使用: <gold>/vmonitor plugin <list|info> [插件ID]</gold>"
-usage-plugin-info: "<yellow>請使用: <gold>/vmonitor plugin info <all|插件ID></gold>"
-plugin-list-empty: "<red>未找到任何插件。</red>"
-unknown-version: "未知"
+        <gold><bold>--- 伺服器運行狀態概覽 ---</bold></gold>
+        <yellow>- 正在運行:</yellow> <green>{running_servers}</green>台
+        <yellow>- 未運行:</yellow> <red>{offline_servers}</red>台
 
-# 插件列表整體格式
-plugin-list-format: |
-  <gold>--- <yellow>已載入插件 ({count})</yellow> <gold>---
-  {plugin_entries}
-# 插件列表中單個條目的格式（用於循環構建）
-plugin-list-entry-line: "<gold>{plugin_name} <gray>v{plugin_version}</gray>"
+        <gold><bold>--- 各子伺服器運行狀態 ---</bold></gold>
+        {server_status_list}
 
-# 插件資訊整體格式 (單個插件和'all'模式下每個插件的格式)
-plugin-info-format: |
-  <gold>--- <yellow>插件資訊: {plugin_name}</yellow> <gold>---
-  <gold>ID:</gold> <gray>{id}</gray>
-  <gold>名稱:</gold> <gray>{name}</gray>
-  <gold>版本:</gold> <gray>{version}</gray>
-  <gold>網站:</gold> <blue><click:open_url:{url}>{url}</click></blue>
-  <gold>描述:</gold> <gray>{description}</gray>
-  <gold>作者:</gold> <gray>{authors}</gray>
+      specific_format: |
+        
+        <gold>--- <yellow>伺服器 {server_name} 詳細信息</yellow> <gold>---
+        <gold>名稱:</gold> <gray>{server_name}</gray>
+        <gold>別名:</gold> <aqua>{server_display_name}</aqua>
+        <gold>版本:</gold> <gray>{version}</gray>
+        <gold>玩家:</gold> <aqua>{online_players}/{max_players}</aqua>
+        <gold>MOTD:</gold>
+        <reset>{motd}</reset>
+      status_offline: "<red>未運行</red>"
+      status_online: "<green>正在運行</green>"
+      server_status_list_format: "<gold>{server_name}</gold> <gray>[{server_display_name}]</gray>: {status}（當前在線玩家情況: {online_players}）"
+      no_players_online_info: "<gray>此伺服器暫無玩家在線。</gray>"
 
-# 'plugin info all' 命令的頭部
-plugin-info-all-header: "<gold>--- <yellow>所有插件資訊</yellow> <gold>---"
+  plugin:
+    not_found: "插件 <red>{plugin}</red> 不存在。"
+    empty_list: "<red>未找到任何插件。</red>"
+    no_url: "<gray>未提供網址</gray>"
+    no_description: "<gray>未提供描述</gray>"
+    no_authors: "<gray>未列出作者</gray>"
+    usage:
+      list: "<yellow>請使用: <gold>/vmonitor plugin <list|info> [插件ID]</gold>"
+      info: "<yellow>請使用: <gold>/vmonitor plugin info <all|插件ID></gold>"
 
-# 插件列表 hover 文本格式 (合併所有信息到這個字面量塊中)
-plugin-list-hover-format: |
-  <gold>ID:</gold> <gray>{id}</gray>
-  <gold>名稱:</gold> <gray>{name}</gray>
-  <gold>版本:</gold> <gray>{version}</gray>
-  <gold>網站:</gold> <blue>{url}</blue>
-  <gold>描述:</gold> <gray>{description}</gray>
-  <gold>作者:</gold> <gray>{authors}</gray>
+    list:
+      plugin_line: "<gold>插件名稱：{plugin_name}</gold> <white>-</white> <gray>版本號：{plugin_version}</gray>"
+      format: |
+        
+        <gold>--- <yellow>已加載插件 ({count})</yellow> <gold>---
+        {plugin_list}
+
+      hover_format: |
+        
+        <gold>ID:</gold> <gray>{id}</gray>
+        <gold>名稱:</gold> <gray>{name}</gray>
+        <gold>版本:</gold> <gray>{version}</gray>
+        <gold>網址:</gold> <blue>{url}</blue>
+        <gold>描述:</gold> <gray>{description}</gray>
+        <gold>作者:</gold> <gray>{authors}</gray>
+
+    info:
+      all_header: "<gold>--- <yellow>所有插件信息</yellow> <gold>---"
+      format: |
+        
+        <gold>--- <yellow>插件信息: {name}</yellow> <gold>---
+        <gold>ID:</gold> <gray>{id}</gray>
+        <gold>名稱:</gold> <gray>{name}</gray>
+        <gold>版本:</gold> <gray>{version}</gray>
+        <gold>網址:</gold> <blue><click:open_url:{url}>{url}</click></blue>
+        <gold>描述:</gold> <gray>{description}</gray>
+        <gold>作者:</gold> <gray>{authors}</gray>

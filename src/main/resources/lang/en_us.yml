@@ -1,98 +1,134 @@
-# English Language File for V-Monitor
+# English language file for V-Monitor
 
-# Player join/leave/switch messages
-join: "<green>{player}</green> joined the server."
-leave: "<red>{player}</red> left the server."
-switch: "<yellow>{player}</yellow> switched from <blue>{from}</blue> to <aqua>{to}</aqua>."
-first-join: "<bold><gold>{player}</gold></bold> joined the server for the first time! Welcome!"
-unknown-server: "Unknown server"
+# Global messages
+global:
+  no_permission: "<red>You do not have permission to use this command.</red>"
+  reload_success: "<green>Configuration reloaded successfully.</green>"
+  unknown_info: "<gray>Unknown</gray>"
+  unknown_version: "Unknown Version"
+  unknown_server: "Unknown Server"
 
-# Generic messages
-server-not-exists: "Server <red>{server}</red> does not exist."
-no-permission: "<red>You do not have permission to use this command.</red>"
-reload-success: "<green>Configuration reloaded successfully.</green>"
-unknown-info: "<gray>N/A</gray>"
-usage-server-list: "<gold>Usage: <white>/vm server list <all|server_name></white></gold>"
-usage-server-info: "<gold>Usage: <white>/vm server info <all|server_name></white></gold>"
+# Player activity messages
+player_activity:
+  join: "<green>{player}</green> joined the server."
+  leave: "<red>{player}</red> left the server."
+  switch: "<yellow>{player}</yellow> switched from <blue>{from}</blue> to <aqua>{to}</aqua>."
+  first_join: "<bold><gold>{player}</gold></bold> joined the server for the first time! Welcome!"
 
-# Help command messages
-help-format: |
-  <gold><bold>V-Monitor - V1.1.0 Help:</bold></gold>
-  <aqua>/vm list [server]</aqua> <white>-</white> <green>View online players list (specify server optional).</green>
-  <aqua>/vm info [server]</aqua> <white>-</white> <green>Query proxy or specified server info.</green>
-  <aqua>/vm reload</aqua> <white>-</white> <green>Reload plugin configuration.</green>
-  <aqua>/vm plugin list</aqua> <white>-</white> <green>List all loaded plugins.</green>
-  <aqua>/vm plugin info <all|plugin_id></aqua> <white>-</white> <green>Query detailed information of a plugin.</green>
+# Command related messages
+commands:
+  version:
+    format: |
+      
+      <gold><bold>V-Monitor - V1.2.0 (Author: MC-Nirvana)</bold></gold>
+      <aqua>/vm help</aqua> <white>-</white> <green>Get overall plugin help information.</green>
 
-# Server list command messages
-list-header: "<gold><bold>Online Server List</bold></gold> - <yellow>Total servers: <blue>{server_count}</blue></yellow>"
-list-server-header: "<gold><bold>Server Online List</bold></gold> - <yellow>Server <aqua>{server}</aqua> has <blue>{server_player}</blue> players online</yellow>"
-list-server-name: "<aqua>{server_display}</aqua>"
-list-server-player: "<green>{players}</green>"
-list-no-players: "<dark_aqua>No players</dark_aqua>"
+  help:
+    all_format: |
+      
+      <gold><bold>V-Monitor - V1.2.0 Help:</bold></gold>
+      <aqua>/vm help</aqua> <white>-</white> <green>Get overall plugin help information.</green>
+      <aqua>/vm reload</aqua> <white>-</white> <green>Reload plugin configuration.</green>
+      <aqua>/vm server list [all|server_name]</aqua> <white>-</white> <green>List players on all or specified servers.</green>
+      <aqua>/vm server info [all|server_name]</aqua> <white>-</white> <green>Get detailed information for all or specified servers.</green>
+      <aqua>/vm plugin list</aqua> <white>-</white> <green>List all loaded plugins.</green>
+      <aqua>/vm plugin info [all|plugin_id]</aqua> <white>-</white> <green>Get detailed information for all or specified plugins.</green>
 
-# Info command messages
-info-proxy-format: |
-  <gold><bold>Current Velocity Proxy Info</bold></gold>
-  <yellow>Core Version:</yellow> <green>{proxy_version}</green>
-  <yellow>Total Online Players:</yellow> <blue>{total_player}</blue>
-  <yellow>Registered Servers:</yellow> <green>{server_count}</green>
+    server_format: |
+      
+      <gold><bold>V-Monitor - V1.2.0 Help:</bold></gold>
+      <aqua>/vm server list [all|server_name]</aqua> <white>-</white> <green>List players on all or specified servers.</green>
+      <aqua>/vm server info [all|server_name]</aqua> <white>-</white> <green>Get detailed information for all or specified servers.</green>
 
-  <gold><bold>Server Status Summary</bold></gold>
-  <yellow>- Running:</yellow> <green>{running_servers}</green>
-  <yellow>- Offline:</yellow> <red>{offline_servers}</red>
+    plugin_format: |
+      
+      <gold><bold>V-Monitor - V1.2.0 Help:</bold></gold>
+      <aqua>/vm plugin list</aqua> <white>-</white> <green>List all loaded plugins.</green>
+      <aqua>/vm plugin info [all|plugin_id]</aqua> <white>-</white> <green>Get detailed information for all or specified plugins.</green>
 
-  <gold><bold>Individual Server Status</bold></gold>
-  {server_status_list}
+  server:
+    not_found: "<red>Server {server} not found.</red>"
+    unreachable: "<red>Could not connect to server {server}.</red>"
+    usage:
+      list: "<gold>Please use: <white>/vm server list <all|server_name></white></gold>"
+      info: "<gold>Please use: <white>/vm server info <all|server_name></white></gold>"
 
-info-server-detail-format: |
-  <gold><bold>Server {server_name} Info</bold></gold>
-  <yellow>Server Core:</yellow> {core_name}
-  <yellow>Game Version:</yellow> {server_version}
-  <yellow>Forge/NeoForge Support:</yellow> {mod_support_status}
-  <yellow>Online Players:</yellow> {online_players}
-  <yellow>Server MOTD:</yellow>
-  <reset>{motd}</reset>
+    list:
+      all_format: |
+        
+        <gold>--- <yellow>All Server Online Players List</yellow> <gold>---
+        <gold>Total players online across all servers:</gold> <aqua>{online_players_count}</aqua>
+        {all_players_list}
+      specific_format: |
+        
+        <gold>--- <yellow>Online Players List on Server {server_display_name}</yellow> <gold>---
+        <gold>Server</gold> <yellow>{server_display_name}</yellow> <gold>has</gold> <aqua>{online_players_number}</aqua> <gold>players online.</gold>
+        {specific_players_list}
+      no_players_online_info: "<gray>No players are currently online on this server.</gray>"
 
-info-server-status-running-short: "<green>Running</green>"
-info-server-status-offline-short: "<red>Offline</red>"
-info-server-unreachable: "<red>Unreachable</red>"
-info-server-mod-support-yes: "<green>Yes</green>"
-info-server-mod-support-no: "<red>No</red>"
-info-server-player-names: "<green>{players}</green>"
-info-server-no-players: "<gray>No players online</gray>"
+    info:
+      all_format: |
+        
+        <gold>--- <yellow>Velocity Instance Overview</yellow> <gold>---
+        <yellow>Core Version:</yellow> <green>{proxy_version}</green>
+        <yellow>Total Players Online:</yellow> <blue>{total_player}</blue>
+        <yellow>Number of Servers:</yellow> <green>{server_count}</green>
 
-# Plugin Command Messages
-usage-plugin: "<yellow>Usage: <gold>/vmonitor plugin <list|info> [plugin_id]</gold>"
-usage-plugin-info: "<yellow>Usage: <gold>/vmonitor plugin info <all|plugin_id></gold>"
-plugin-list-empty: "<red>No plugins found or loaded.</red>"
-unknown-version: "Unknown"
+        <gold><bold>--- Server Running Status Overview ---</bold></gold>
+        <yellow>- Running:</yellow> <green>{running_servers}</green>
+        <yellow>- Offline:</yellow> <red>{offline_servers}</red>
 
-# Overall format for the plugin list
-plugin-list-format: |
-  <gold>--- <yellow>Loaded Plugins ({count})</yellow> <gold>---
-  {plugin_entries}
-# Format for a single entry in the plugin list (used for looping)
-plugin-list-entry-line: "<gold>{plugin_name} <gray>v{plugin_version}</gray>"
+        <gold><bold>--- Sub-Server Running Status ---</bold></gold>
+        {server_status_list}
 
-# Overall plugin information format (for single plugin and each plugin in 'all' mode)
-plugin-info-format: |
-  <gold>--- <yellow>Plugin Information: {plugin_name}</yellow> <gold>---
-  <gold>ID:</gold> <gray>{id}</gray>
-  <gold>Name:</gold> <gray>{name}</gray>
-  <gold>Version:</gold> <gray>{version}</gray>
-  <gold>URL:</gold> <blue><click:open_url:{url}>{url}</click></blue>
-  <gold>Description:</gold> <gray>{description}</gray>
-  <gold>Authors:</gold> <gray>{authors}</gray>
+      specific_format: |
+        
+        <gold>--- <yellow>Server {server_name} Details</yellow> <gold>---
+        <gold>Name:</gold> <gray>{server_name}</gray>
+        <gold>Alias:</gold> <aqua>{server_display_name}</aqua>
+        <gold>Version:</gold> <gray>{version}</gray>
+        <gold>Players:</gold> <aqua>{online_players}/{max_players}</aqua>
+        <gold>MOTD:</gold>
+        <reset>{motd}</reset>
+      status_offline: "<red>Offline</red>"
+      status_online: "<green>Online</green>"
+      server_status_list_format: "<gold>{server_name}</gold> <gray>[{server_display_name}]</gray>: {status} (Currently online players: {online_players})"
+      no_players_online_info: "<gray>No players are currently online on this server.</gray>"
 
-# Header for the 'plugin info all' command
-plugin-info-all-header: "<gold>--- <yellow>All Plugin Information</yellow> <gold>---"
+  plugin:
+    not_found: "Plugin <red>{plugin}</red> not found."
+    empty_list: "<red>No plugins found.</red>"
+    no_url: "<gray>No URL provided</gray>"
+    no_description: "<gray>No description provided</gray>"
+    no_authors: "<gray>No authors listed</gray>"
+    usage:
+      list: "<yellow>Please use: <gold>/vmonitor plugin <list|info> [plugin_id]</gold>"
+      info: "<yellow>Please use: <gold>/vmonitor plugin info <all|plugin_id></gold>"
 
-# Plugin list hover text format (combines all info into this literal block)
-plugin-list-hover-format: |
-  <gold>ID:</gold> <gray>{id}</gray>
-  <gold>Name:</gold> <gray>{name}</gray>
-  <gold>Version:</gold> <gray>{version}</gray>
-  <gold>URL:</gold> <blue>{url}</blue>
-  <gold>Description:</gold> <gray>{description}</gray>
-  <gold>Authors:</gold> <gray>{authors}</gray>
+    list:
+      plugin_line: "<gold>Plugin Name: {plugin_name}</gold> <white>-</white> <gray>Version: {plugin_version}</gray>"
+      format: |
+        
+        <gold>--- <yellow>Loaded Plugins ({count})</yellow> <gold>---
+        {plugin_list}
+
+      hover_format: |
+        
+        <gold>ID:</gold> <gray>{id}</gray>
+        <gold>Name:</gold> <gray>{name}</gray>
+        <gold>Version:</gold> <gray>{version}</gray>
+        <gold>URL:</gold> <blue>{url}</blue>
+        <gold>Description:</gold> <gray>{description}</gray>
+        <gold>Authors:</gold> <gray>{authors}</gray>
+
+    info:
+      all_header: "<gold>--- <yellow>All Plugin Information</yellow> <gold>---"
+      format: |
+        
+        <gold>--- <yellow>Plugin Info: {name}</yellow> <gold>---
+        <gold>ID:</gold> <gray>{id}</gray>
+        <gold>Name:</gold> <gray>{name}</gray>
+        <gold>Version:</gold> <gray>{version}</gray>
+        <gold>URL:</gold> <blue><click:open_url:{url}>{url}</click></blue>
+        <gold>Description:</gold> <gray>{description}</gray>
+        <gold>Authors:</gold> <gray>{authors}</gray>

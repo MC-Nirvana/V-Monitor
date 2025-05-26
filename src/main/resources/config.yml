@@ -1,0 +1,13 @@
+# V-Monitor Configuration
+
+# Default language（默认语言设置）
+language:
+  default: "zh_cn"
+
+# Server aliases (服务器名称别名设置)
+# Format: actual_server_name: "alias"
+# Example: 'hub' will be an alias for the server named 'lobby'
+# server-aliases:
+#   - lobby: "hub"
+#   - server2: "creative"
+server-aliases: []

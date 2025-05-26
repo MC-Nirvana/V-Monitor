@@ -18,6 +18,8 @@ import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class PlayerDataLoader {
     private final Logger logger;
@@ -26,10 +28,10 @@ public class PlayerDataLoader {
     private HashMap<UUID, PlayerFirstJoinInfo> playerData = new HashMap<>();
 
     public static class PlayerFirstJoinInfo {
-        public long firstJoinTime;
+        public String firstJoinTime;
         public String playerName;
         public PlayerFirstJoinInfo() {}
-        public PlayerFirstJoinInfo(long firstJoinTime, String playerName) {
+        public PlayerFirstJoinInfo(String firstJoinTime, String playerName) {
             this.firstJoinTime = firstJoinTime;
             this.playerName = playerName;
         }
@@ -103,7 +105,9 @@ public class PlayerDataLoader {
 
     public void addPlayerFirstJoinInfo(UUID uuid, String playerName) {
         if (!playerData.containsKey(uuid)) {
-            playerData.put(uuid, new PlayerFirstJoinInfo(System.currentTimeMillis(), playerName));
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+            String formattedTime = sdf.format(new Date(System.currentTimeMillis()));
+            playerData.put(uuid, new PlayerFirstJoinInfo(formattedTime, playerName));
             savePlayerData();
         } else {
             PlayerFirstJoinInfo existingInfo = playerData.get(uuid);

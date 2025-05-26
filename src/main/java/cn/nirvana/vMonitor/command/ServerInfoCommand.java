@@ -2,6 +2,7 @@ package cn.nirvana.vMonitor.command;
 
 import cn.nirvana.vMonitor.config.ConfigFileLoader;
 import cn.nirvana.vMonitor.config.LanguageLoader;
+
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -10,31 +11,32 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.server.ServerPing;
-import net.kyori.adventure.text.Component;
+
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
-public class InfoCommand {
+public class ServerInfoCommand {
     private final ProxyServer proxyServer;
     private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
     private final ConfigFileLoader configFileLoader;
     private final CommandRegistrar commandRegistrar;
 
-    public InfoCommand(ProxyServer proxyServer, LanguageLoader languageLoader, MiniMessage miniMessage,
-                       ConfigFileLoader configFileLoader, CommandRegistrar commandRegistrar) {
+    public ServerInfoCommand(ProxyServer proxyServer, LanguageLoader languageLoader, MiniMessage miniMessage, ConfigFileLoader configFileLoader, CommandRegistrar commandRegistrar) {
         this.proxyServer = proxyServer;
         this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
@@ -47,11 +49,10 @@ public class InfoCommand {
         commandRegistrar.registerServerSubCommand(serverNode -> {
             LiteralCommandNode<CommandSource> infoNode = LiteralArgumentBuilder.<CommandSource>literal("info")
                     .executes(context -> {
-                        context.getSource().sendMessage(miniMessage.deserialize(languageLoader.getMessage("server-info-help")));
+                        context.getSource().sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.usage.info")));
                         return SINGLE_SUCCESS;
                     })
                     .build();
-
             infoNode.addChild(LiteralArgumentBuilder.<CommandSource>literal("all")
                     .executes(context -> {
                         executeInfoAll(context.getSource());
@@ -59,7 +60,6 @@ public class InfoCommand {
                     })
                     .build()
             );
-
             infoNode.addChild(RequiredArgumentBuilder.<CommandSource, String>argument("server", word())
                     .suggests(new ServerNameSuggestionProvider(proxyServer))
                     .executes(context -> {
@@ -68,7 +68,6 @@ public class InfoCommand {
                     })
                     .build()
             );
-
             serverNode.addChild(infoNode);
         });
     }
@@ -78,16 +77,13 @@ public class InfoCommand {
         if (optionalServer.isPresent()) {
             RegisteredServer registeredServer = optionalServer.get();
             String serverDisplayName = configFileLoader.getServerDisplayName(registeredServer.getServerInfo().getName());
-
             registeredServer.ping().whenComplete((pingResult, throwable) -> {
                 if (throwable != null || pingResult == null) {
-                    source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("server-ping-failed").replace("{server}", serverDisplayName)));
+                    source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.unreachable").replace("{server}", serverDisplayName)));
                     return;
                 }
-
                 String motd = PlainTextComponentSerializer.plainText().serialize(pingResult.getDescriptionComponent());
-                String version = pingResult.getVersion() != null ? pingResult.getVersion().getName() : languageLoader.getMessage("unknown-version");
-
+                String version = pingResult.getVersion() != null ? pingResult.getVersion().getName() : languageLoader.getMessage("global.unknown_version");
                 int onlinePlayers = 0;
                 int maxPlayers = 0;
                 Optional<ServerPing.Players> playersOptional = pingResult.getPlayers();
@@ -96,75 +92,80 @@ public class InfoCommand {
                     onlinePlayers = players.getOnline();
                     maxPlayers = players.getMax();
                 }
-
-                String infoMessage = languageLoader.getMessage("info-server-format")
-                        .replace("{server}", serverDisplayName)
-                        .replace("{motd}", motd)
+                String infoMessage = languageLoader.getMessage("commands.server.info.specific_format") // specific_format 现在包含了 header
+                        .replace("{server_name}", serverNameArg)
+                        .replace("{server_display_name}", serverDisplayName)
                         .replace("{version}", version)
                         .replace("{online_players}", String.valueOf(onlinePlayers))
-                        .replace("{max_players}", String.valueOf(maxPlayers));
-
+                        .replace("{max_players}", String.valueOf(maxPlayers))
+                        .replace("{motd}", motd);
                 source.sendMessage(miniMessage.deserialize(infoMessage));
             }).exceptionally(ex -> {
-                source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("server-ping-failed").replace("{server}", serverDisplayName)));
+                source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.unreachable").replace("{server}", serverDisplayName)));
                 return null;
             });
         } else {
-            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("server-not-found").replace("{server}", serverNameArg)));
+            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.not_found").replace("{server}", serverNameArg)));
         }
     }
 
     private void executeInfoAll(CommandSource source) {
-        String header = languageLoader.getMessage("info-all-header");
-        if (header != null && !header.isEmpty()) {
-            source.sendMessage(miniMessage.deserialize(header));
-        }
-
-        List<CompletableFuture<Void>> futures = proxyServer.getAllServers().stream()
+        AtomicInteger totalOnlinePlayers = new AtomicInteger(0);
+        AtomicInteger runningServersCount = new AtomicInteger(0);
+        AtomicInteger offlineServersCount = new AtomicInteger(0);
+        List<CompletableFuture<String>> serverStatusFutures = proxyServer.getAllServers().stream()
                 .map(registeredServer -> {
                     String serverName = registeredServer.getServerInfo().getName();
                     String serverDisplayName = configFileLoader.getServerDisplayName(serverName);
-
-                    // Pinging each server and processing the result for display
-                    // The .thenAccept() method is key here, as it processes the result
-                    // but returns CompletableFuture<Void>, which matches our List type.
                     return registeredServer.ping()
-                            .thenAccept(pingResult -> {
-                                String statusKey = "status-offline";
+                            .thenApply(pingResult -> {
+                                String statusMessage;
+                                String onlinePlayersDisplay;
                                 int playersOnline = 0;
-                                if (pingResult != null) { // If ping was successful
-                                    statusKey = "status-online";
+                                if (pingResult != null) {
+                                    runningServersCount.incrementAndGet();
                                     Optional<ServerPing.Players> playersOptional = pingResult.getPlayers();
                                     if (playersOptional.isPresent()) {
                                         playersOnline = playersOptional.get().getOnline();
+                                        totalOnlinePlayers.addAndGet(playersOnline);
                                     }
+                                    statusMessage = languageLoader.getMessage("commands.server.info.status_online");
+                                    onlinePlayersDisplay = String.valueOf(playersOnline);
+                                } else {
+                                    offlineServersCount.incrementAndGet();
+                                    statusMessage = languageLoader.getMessage("commands.server.info.status_offline");
+                                    onlinePlayersDisplay = languageLoader.getMessage("commands.server.info.no_players_online_info");
                                 }
-
-                                String entryFormat = languageLoader.getMessage("info-server-status-entry");
-                                String filledEntry = entryFormat
-                                        .replace("{server}", serverDisplayName)
-                                        .replace("{status}", languageLoader.getMessage(statusKey))
-                                        .replace("{online_players}", String.valueOf(playersOnline));
-                                source.sendMessage(miniMessage.deserialize(filledEntry));
+                                return languageLoader.getMessage("commands.server.info.server_status_list_format")
+                                        .replace("{server_name}", serverName)
+                                        .replace("{server_display_name}", serverDisplayName)
+                                        .replace("{status}", statusMessage)
+                                        .replace("{online_players}", onlinePlayersDisplay);
                             })
                             .exceptionally(ex -> {
-                                // If ping fails (exception occurs), send offline message
-                                String entryFormat = languageLoader.getMessage("info-server-status-entry");
-                                String filledEntry = entryFormat
-                                        .replace("{server}", serverDisplayName)
-                                        .replace("{status}", languageLoader.getMessage("status-offline"))
-                                        .replace("{online_players}", "0");
-                                source.sendMessage(miniMessage.deserialize(filledEntry));
-                                return null; // exceptionally also returns CompletableFuture<Void> if its function returns null
+                                offlineServersCount.incrementAndGet();
+                                return languageLoader.getMessage("commands.server.info.server_status_list_format")
+                                        .replace("{server_name}", serverName)
+                                        .replace("{server_display_name}", serverDisplayName)
+                                        .replace("{status}", languageLoader.getMessage("commands.server.info.status_offline"))
+                                        .replace("{online_players}", languageLoader.getMessage("commands.server.info.no_players_online_info"));
                             });
                 })
                 .collect(Collectors.toList());
-
-        // Wait for all pings to complete. This is useful for knowing when all messages have been sent.
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .whenComplete((result, throwable) -> {
-                    // All pings and their message sending logic are complete.
-                    // You could add a final "footer" message here if needed.
+        CompletableFuture.allOf(serverStatusFutures.toArray(new CompletableFuture[0]))
+                .thenAccept(v -> {
+                    String serverStatusList = serverStatusFutures.stream()
+                            .map(CompletableFuture::join)
+                            .collect(Collectors.joining("\n"));
+                    String proxyVersion = proxyServer.getVersion().getName() + " " + proxyServer.getVersion().getVersion();
+                    String allFormat = languageLoader.getMessage("commands.server.info.all_format")
+                            .replace("{proxy_version}", proxyVersion)
+                            .replace("{total_player}", String.valueOf(totalOnlinePlayers.get()))
+                            .replace("{server_count}", String.valueOf(proxyServer.getAllServers().size()))
+                            .replace("{running_servers}", String.valueOf(runningServersCount.get()))
+                            .replace("{offline_servers}", String.valueOf(offlineServersCount.get()))
+                            .replace("{server_status_list}", serverStatusList);
+                    source.sendMessage(miniMessage.deserialize(allFormat));
                 });
     }
 
