@@ -22,6 +22,9 @@ import org.slf4j.Logger;
 
 import java.nio.file.Path;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 @Plugin(id = "v-monitor", name = "V-Monitor", version = "1.2.1", url = "https://github.com/MC-Nirvana/V-Monitor", description = "Monitor the player's activity status", authors = {"MC-Nirvana"})
 public final class VMonitor {
     private final ProxyServer proxyServer;
@@ -29,7 +32,6 @@ public final class VMonitor {
     private final Path dataDirectory;
     private final CommandManager commandManager;
     private final MiniMessage miniMessage;
-
     private ConfigFileLoader configFileLoader;
     private LanguageLoader languageLoader;
     private PlayerDataLoader playerDataLoader;
@@ -46,13 +48,18 @@ public final class VMonitor {
 
     @Subscribe
     public void onProxyInitialize(ProxyInitializeEvent event) {
-        logger.info("Initializing V-Monitor...");
+        logger.info("V-Monitor is enabling...");
         configFileLoader = new ConfigFileLoader(logger, dataDirectory);
         configFileLoader.loadConfig();
         languageLoader = new LanguageLoader(logger, dataDirectory, configFileLoader);
         languageLoader.loadLanguage();
         playerDataLoader = new PlayerDataLoader(logger, dataDirectory);
         playerDataLoader.loadPlayerData();
+        if (playerDataLoader.getServerBootTime() == null) {
+            String bootTime = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+            playerDataLoader.setServerBootTime(bootTime);
+            logger.info("Server boot time recorded: " + bootTime);
+        }
         proxyServer.getEventManager().register(this, new PlayerActivityListener(proxyServer, configFileLoader, languageLoader, playerDataLoader, miniMessage, this));
         commandRegistrar = new CommandRegistrar(commandManager, proxyServer, languageLoader, miniMessage);
         HelpCommand helpCommandInstance = new HelpCommand(languageLoader, miniMessage);

@@ -21,10 +21,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.charset.StandardCharsets;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
+
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.Map;
 import java.util.Date;
+import java.util.concurrent.ConcurrentHashMap;
 
 import java.text.SimpleDateFormat;
 
@@ -32,108 +37,111 @@ public class PlayerDataLoader {
     private final Logger logger;
     private final Path dataDirectory;
     private final String playerDataFileName = "playerdata.json";
-    private HashMap<UUID, PlayerFirstJoinInfo> playerData = new HashMap<>();
+    private RootData rootData;
 
-    public static class PlayerFirstJoinInfo {
-        public String firstJoinTime;
+    public static class RootData {
+        public ServerData server;
+        public Map<UUID, PlayerData> players;
+        public RootData() {
+            this.server = new ServerData();
+            this.players = new ConcurrentHashMap<>();
+        }
+    }
+
+    public static class ServerData {
+        public String bootTime;
+        public ServerData() {
+            this.bootTime = null;
+        }
+    }
+
+    public static class PlayerData {
         public String playerName;
-        public PlayerFirstJoinInfo() {}
-        public PlayerFirstJoinInfo(String firstJoinTime, String playerName) {
-            this.firstJoinTime = firstJoinTime;
+        public String firstJoinTime;
+        public String lastLoginTime;
+        public String lastLogoutTime;
+        public Map<String, DailyLoginData> dailyLogins;
+        public Map<String, WeeklyLoginData> weeklyLogins;
+
+        public long totalPlayTime;
+
+        public PlayerData() {
+            this.dailyLogins = new ConcurrentHashMap<>();
+            this.weeklyLogins = new ConcurrentHashMap<>();
+            this.totalPlayTime = 0;
+        }
+
+        public PlayerData(String playerName, String firstJoinTime) {
+            this();
             this.playerName = playerName;
+            this.firstJoinTime = firstJoinTime;
+        }
+    }
+
+    public static class DailyLoginData {
+        public int loginCount;
+        public long playDurationSeconds;
+
+        public DailyLoginData() {
+            this.loginCount = 0;
+            this.playDurationSeconds = 0;
+        }
+    }
+
+    public static class WeeklyLoginData {
+        public int loginDaysInWeek;
+        public long totalPlayTimeSecondsInWeek;
+
+        public WeeklyLoginData() {
+            this.loginDaysInWeek = 0;
+            this.totalPlayTimeSecondsInWeek = 0;
         }
     }
 
     public PlayerDataLoader(Logger logger, Path dataDirectory) {
         this.logger = logger;
         this.dataDirectory = dataDirectory;
-    }
-
-    public HashMap<UUID, PlayerFirstJoinInfo> getPlayerData() {
-        return playerData;
+        this.rootData = new RootData();
     }
 
     public void loadPlayerData() {
-        File playerDataFile = new File(dataDirectory.toFile(), playerDataFileName);
-        Path playerFilePath = playerDataFile.toPath();
-        boolean playerFileExists = Files.exists(playerFilePath);
-        if (!playerFileExists) {
-            logger.info("Player data file not found, creating a new one.");
-            if (!createEmptyPlayerDataFile(playerFilePath)) {
-                logger.error("Failed to create empty player data file. Plugin might not be able to save player data.");
-                this.playerData = new HashMap<>();
-            } else {
-                logger.info("Empty player data file created successfully.");
-                this.playerData = new HashMap<>();
-            }
+        File playerDataFile = dataDirectory.resolve(playerDataFileName).toFile();
+        if (!playerDataFile.exists()) {
+            this.rootData = new RootData();
+            savePlayerData();
+            logger.info("Player data file does not exist, created a new one.");
             return;
         }
+
         try (InputStreamReader reader = new InputStreamReader(new FileInputStream(playerDataFile), StandardCharsets.UTF_8)) {
             Gson gson = new Gson();
-            java.lang.reflect.Type type = new TypeToken<HashMap<UUID, PlayerFirstJoinInfo>>() {}.getType();
-            HashMap<UUID, PlayerFirstJoinInfo> loadedData = gson.fromJson(reader, type);
-            if (loadedData != null) {
-                this.playerData.clear();
-                this.playerData.putAll(loadedData);
-                logger.info("Successfully loaded player data file.");
-            } else {
-                logger.warn("Player data file is empty or invalid. Restoring default (empty data).");
-                throw new RuntimeException("Player data file empty or invalid.");
+            TypeToken<RootData> typeToken = new TypeToken<RootData>() {};
+            this.rootData = gson.fromJson(reader, typeToken.getType());
+            if (this.rootData == null) {
+                this.rootData = new RootData();
             }
-        } catch (Exception e) {
-            logger.error("Error processing player data file '" + playerDataFileName + "': " + e.getMessage() + ". Renaming and restoring default.");
-            renameAndCopyDefault(playerFilePath, playerDataFileName + ".err");
-            try (InputStreamReader newReader = new InputStreamReader(new FileInputStream(playerDataFile), StandardCharsets.UTF_8)) {
-                Gson gson = new Gson();
-                java.lang.reflect.Type type = new TypeToken<HashMap<UUID, PlayerFirstJoinInfo>>() {}.getType();
-                HashMap<UUID, PlayerFirstJoinInfo> reloadedData = gson.fromJson(newReader, type);
-                if (reloadedData != null) {
-                    this.playerData = reloadedData;
-                    logger.info("Successfully loaded the restored default (empty) player data file.");
-                } else {
-                    logger.error("Failed to load the restored default (empty) player data file. Plugin might not be able to save player data.");
-                    this.playerData = new HashMap<>();
-                }
-            } catch (Exception ex) {
-                logger.error("Critical: Failed to load player data even after restoration attempt: " + ex.getMessage());
-                this.playerData = new HashMap<>();
+            if (this.rootData.server == null) {
+                this.rootData.server = new ServerData();
             }
-        }
-    }
-
-    private boolean createEmptyPlayerDataFile(Path targetPath) {
-        try {
-            Files.createDirectories(targetPath.getParent());
-            try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(targetPath.toFile()), StandardCharsets.UTF_8)) {
-                Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                gson.toJson(new HashMap<UUID, PlayerFirstJoinInfo>(), writer);
+            if (this.rootData.players == null) {
+                this.rootData.players = new ConcurrentHashMap<>();
             }
-            return true;
+            this.rootData.players.values().forEach(playerData -> {
+                if (playerData.dailyLogins == null) playerData.dailyLogins = new ConcurrentHashMap<>();
+                if (playerData.weeklyLogins == null) playerData.weeklyLogins = new ConcurrentHashMap<>();
+            });
+            logger.info("Player data loaded successfully.");
         } catch (IOException e) {
-            logger.error("Failed to create empty player data file at '" + targetPath + "': " + e.getMessage());
-            return false;
-        }
-    }
-
-    private void renameAndCopyDefault(Path originalPath, String newSuffix) {
-        try {
-            Path errorPath = originalPath.resolveSibling(originalPath.getFileName().toString() + newSuffix);
-            Files.move(originalPath, errorPath, StandardCopyOption.REPLACE_EXISTING);
-            logger.warn("Renamed corrupted player data file to: " + errorPath.getFileName());
-            createEmptyPlayerDataFile(originalPath);
-        } catch (IOException e) {
-            logger.error("Failed to rename or create default player data file for restoration: " + e.getMessage());
+            logger.error("Could not load player data file: " + e.getMessage());
+            this.rootData = new RootData();
         }
     }
 
     public void savePlayerData() {
-        File playerDataFile = new File(dataDirectory.toFile(), playerDataFileName);
+        File playerDataFile = dataDirectory.resolve(playerDataFileName).toFile();
         try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(playerDataFile), StandardCharsets.UTF_8)) {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            if (this.playerData == null) {
-                this.playerData = new HashMap<>();
-            }
-            gson.toJson(this.playerData, writer);
+            gson.toJson(this.rootData, writer);
             logger.debug("Successfully saved player data file.");
         } catch (IOException e) {
             logger.error("Could not save player data file: " + e.getMessage());
@@ -141,13 +149,15 @@ public class PlayerDataLoader {
     }
 
     public void addPlayerFirstJoinInfo(UUID uuid, String playerName) {
-        if (!playerData.containsKey(uuid)) {
+        if (!rootData.players.containsKey(uuid)) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
             String formattedTime = sdf.format(new Date(System.currentTimeMillis()));
-            playerData.put(uuid, new PlayerFirstJoinInfo(formattedTime, playerName));
+            PlayerData newPlayerData = new PlayerData(playerName, formattedTime);
+            newPlayerData.lastLoginTime = formattedTime;
+            rootData.players.put(uuid, newPlayerData);
             savePlayerData();
         } else {
-            PlayerFirstJoinInfo existingInfo = playerData.get(uuid);
+            PlayerData existingInfo = rootData.players.get(uuid);
             if (!existingInfo.playerName.equals(playerName)) {
                 existingInfo.playerName = playerName;
                 savePlayerData();
@@ -156,10 +166,73 @@ public class PlayerDataLoader {
     }
 
     public boolean hasPlayerJoinedBefore(UUID uuid) {
-        return playerData.containsKey(uuid);
+        return rootData.players.containsKey(uuid);
     }
 
-    public PlayerFirstJoinInfo getPlayerFirstJoinInfo(UUID uuid) {
-        return playerData.get(uuid);
+    public PlayerData getPlayerData(UUID uuid) {
+        return rootData.players.get(uuid);
+    }
+
+    public void updatePlayerLoginData(UUID uuid, String playerName) {
+        PlayerData playerData = rootData.players.computeIfAbsent(uuid, k -> {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+            String formattedTime = sdf.format(new Date(System.currentTimeMillis()));
+            return new PlayerData(playerName, formattedTime);
+        });
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+        String currentFormattedTime = sdf.format(new Date(System.currentTimeMillis()));
+        playerData.lastLoginTime = currentFormattedTime;
+        playerData.playerName = playerName;
+        String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        DailyLoginData dailyData = playerData.dailyLogins.computeIfAbsent(today, k -> new DailyLoginData());
+        dailyData.loginCount++;
+        String currentWeek = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-'W'ww"));
+        WeeklyLoginData weeklyData = playerData.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
+        if (dailyData.loginCount == 1) {
+            weeklyData.loginDaysInWeek++;
+        }
+        savePlayerData();
+    }
+
+    public void updatePlayerLogoutData(UUID uuid) {
+        PlayerData playerData = rootData.players.get(uuid);
+        if (playerData != null) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+            String currentFormattedTime = sdf.format(new Date(System.currentTimeMillis()));
+            playerData.lastLogoutTime = currentFormattedTime;
+            if (playerData.lastLoginTime != null && !playerData.lastLoginTime.isEmpty()) {
+                try {
+                    Date loginDate = sdf.parse(playerData.lastLoginTime);
+                    long durationSeconds = (System.currentTimeMillis() - loginDate.getTime()) / 1000;
+                    String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+                    DailyLoginData dailyData = playerData.dailyLogins.computeIfAbsent(today, k -> new DailyLoginData());
+                    dailyData.playDurationSeconds += durationSeconds;
+                    String currentWeek = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-'W'ww"));
+                    WeeklyLoginData weeklyData = playerData.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
+                    weeklyData.totalPlayTimeSecondsInWeek += durationSeconds;
+                    playerData.totalPlayTime += durationSeconds;
+                } catch (java.text.ParseException e) {
+                    logger.error("Error parsing lastLoginTime for player " + uuid + ": " + e.getMessage());
+                }
+            }
+            savePlayerData();
+        }
+    }
+
+    public String getServerBootTime() {
+        if (rootData != null && rootData.server != null) {
+            return rootData.server.bootTime;
+        }
+        return null;
+    }
+
+    public void setServerBootTime(String bootTime) {
+        if (rootData != null) {
+            if (rootData.server == null) {
+                rootData.server = new ServerData();
+            }
+            rootData.server.bootTime = bootTime;
+            savePlayerData();
+        }
     }
 }
