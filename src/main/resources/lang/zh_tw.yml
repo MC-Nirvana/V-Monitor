@@ -10,10 +10,10 @@ global:
 
 # 玩家活動消息
 player_activity:
-  join: "<green>{player}</green>加入了伺服器。"
-  leave: "<red>{player}</red>離開了伺服器。"
-  switch: "<yellow>{player}</yellow>從 <blue>{from}</blue> 切換到了 <aqua>{to}</aqua>。"
   first_join: "<bold><gold>{player}</gold></bold>首次加入伺服器！歡迎！"
+  join: "<green>{player}</green>加入了伺服器。"
+  quit: "<red>{player}</red>離開了伺服器。"
+  switch: "<yellow>{player}</yellow>從 <blue>{from}</blue> 切換到了 <aqua>{to}</aqua>。"
 
 # 命令相關消息
 commands:

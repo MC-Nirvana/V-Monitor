@@ -10,10 +10,10 @@ global:
 
 # Player activity messages
 player_activity:
-  join: "<green>{player}</green> joined the server."
-  leave: "<red>{player}</red> left the server."
-  switch: "<yellow>{player}</yellow> switched from <blue>{from}</blue> to <aqua>{to}</aqua>."
   first_join: "<bold><gold>{player}</gold></bold> joined the server for the first time! Welcome!"
+  join: "<green>{player}</green> joined the server."
+  quit: "<red>{player}</red> left the server."
+  switch: "<yellow>{player}</yellow> switched from <blue>{from}</blue> to <aqua>{to}</aqua>."
 
 # Command related messages
 commands:
