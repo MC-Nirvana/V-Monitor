@@ -36,60 +36,28 @@ public class PlayerActivityListener {
     }
 
     @Subscribe
-    public void onLogin(LoginEvent event) {
-        Player player = event.getPlayer();
-        UUID playerUuid = player.getUniqueId();
-        String playerName = player.getUsername();
-        boolean isFirstLogin = !playerDataLoader.hasPlayerJoinedBefore(playerUuid);
-        playerDataLoader.onPlayerLogin(playerUuid, playerName);
-        proxyServer.getScheduler().buildTask(plugin, () -> {
-            if (configFileLoader.getBoolean("player_activity.enable_login_message", true)) {
-                String messageKey;
-                if (isFirstLogin) {
-                    messageKey = "player_activity.first_join";
-                } else {
-                    messageKey = "player_activity.join";
-                }
-                String rawMessage = languageLoader.getMessage(messageKey);
-                if (rawMessage != null && !rawMessage.isEmpty() && !rawMessage.startsWith("<red>Missing Language Key:")) {
-                    Component component = miniMessage.deserialize(rawMessage.replace("{player}", player.getUsername()));
-                    proxyServer.sendMessage(component);
-                } else {
-                    if (isFirstLogin) {
-                        String fallbackMessage = languageLoader.getMessage("player_activity.join");
-                        if (fallbackMessage != null && !fallbackMessage.isEmpty() && !fallbackMessage.startsWith("<red>Missing Language Key:")) {
-                            Component component = miniMessage.deserialize(fallbackMessage.replace("{player}", player.getUsername()));
-                            proxyServer.sendMessage(component);
-                        } else {
-                            proxyServer.sendMessage(miniMessage.deserialize("<red>Login message configuration error or missing language key.</red>"));
-                        }
-                    } else {
-                        proxyServer.sendMessage(miniMessage.deserialize("<red>Login message configuration error or missing language key.</red>"));
-                    }
-                }
-            }
-        }).delay(500, TimeUnit.MILLISECONDS).schedule();
+    public void onPlayerConnect(LoginEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        String playerName = event.getPlayer().getUsername();
+        boolean isFirstJoin = !playerDataLoader.hasPlayerJoinedBefore(uuid);
+        if (isFirstJoin) {
+            playerDataLoader.updatePlayerJoinTime(uuid, playerName);
+        } else {
+            playerDataLoader.updatePlayerLastLoginTime(uuid);
+        }
+        onPlayerLogin(playerName, isFirstJoin);
     }
 
     @Subscribe
-    public void onDisconnect(DisconnectEvent event) {
-        Player player = event.getPlayer();
-        playerDataLoader.onPlayerQuit(player.getUniqueId());
-        proxyServer.getScheduler().buildTask(plugin, () -> {
-            if (configFileLoader.getBoolean("player_activity.enable_disconnect_message", true)) {
-                String leaveMessage = languageLoader.getMessage("player_activity.leave");
-                if (leaveMessage != null && !leaveMessage.isEmpty() && !leaveMessage.startsWith("<red>Missing Language Key:")) {
-                    Component component = miniMessage.deserialize(leaveMessage.replace("{player}", player.getUsername()));
-                    proxyServer.sendMessage(component);
-                } else {
-                    proxyServer.sendMessage(miniMessage.deserialize("<red>Disconnect message configuration error or missing language key.</red>"));
-                }
-            }
-        }).delay(500, TimeUnit.MILLISECONDS).schedule();
+    public void onPlayerDisconnect(DisconnectEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        String playerName = event.getPlayer().getUsername();
+        playerDataLoader.updatePlayerLastQuitTime(uuid);
+        onPlayerLogout(playerName);
     }
 
     @Subscribe
-    public void onServerConnected(ServerConnectedEvent event) {
+    public void onPlayerSwitch(ServerConnectedEvent event) {
         Player player = event.getPlayer();
         proxyServer.getScheduler().buildTask(plugin, () -> {
             String fromServerRawName = event.getPreviousServer()
@@ -111,6 +79,34 @@ public class PlayerActivityListener {
                         proxyServer.sendMessage(miniMessage.deserialize("<red>Server switch message configuration error or missing language key.</red>"));
                     }
                 }
+            }
+        }).delay(500, TimeUnit.MILLISECONDS).schedule();
+    }
+
+    private void onPlayerLogin(String playerName, boolean isFirstJoin) {
+        proxyServer.getScheduler().buildTask(plugin, () -> {
+            String messageKey = isFirstJoin ? "player_activity.first_join" : "player_activity.join";
+            String message = languageLoader.getMessage(messageKey);
+            if ("player_activity.join".equals(messageKey) && !configFileLoader.getBoolean("player_activity.enable_login_message", true)) {
+                return;
+            }
+            if (message != null && !message.isEmpty() && !message.startsWith("<red>Missing Language Key:")) {
+                Component component = miniMessage.deserialize(message.replace("{player}", playerName));
+                proxyServer.sendMessage(component);
+            } else {
+                proxyServer.sendMessage(miniMessage.deserialize("<red>Login message configuration error or missing language key for " + messageKey + ".</red>"));
+            }
+        }).delay(500, TimeUnit.MILLISECONDS).schedule();
+    }
+
+    private void onPlayerLogout(String playerName) {
+        proxyServer.getScheduler().buildTask(plugin, () -> {
+            String quitMessage = languageLoader.getMessage("player_activity.quit");
+            if (quitMessage != null && !quitMessage.isEmpty() && !quitMessage.startsWith("<red>Missing Language Key:")) {
+                Component component = miniMessage.deserialize(quitMessage.replace("{player}", playerName));
+                proxyServer.sendMessage(component);
+            } else {
+                proxyServer.sendMessage(miniMessage.deserialize("<red>Quit message configuration error or missing language key.</red>"));
             }
         }).delay(500, TimeUnit.MILLISECONDS).schedule();
     }
