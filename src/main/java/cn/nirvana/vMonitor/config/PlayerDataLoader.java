@@ -11,16 +11,11 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAdjusters;
-import java.time.temporal.WeekFields;
 
 import java.util.Date;
 import java.util.Locale;
@@ -33,7 +28,7 @@ import java.text.SimpleDateFormat;
 public class PlayerDataLoader {
     private final Logger logger;
     private final Path dataDirectory;
-    private final String playerDataFileName = "playerdata.json";
+    private final String playerDataFileName = "data.json";
 
     private RootData rootData;
 
