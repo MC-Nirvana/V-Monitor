@@ -2,34 +2,28 @@
 package cn.nirvana.vMonitor.config;
 
 import org.slf4j.Logger;
-
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.error.YAMLException;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.FileWriter; // 新增导入
-
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.charset.StandardCharsets;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.Set; // 移除 Set<String> ALLOWED_LANGUAGES 的定义
 
 public class ConfigFileLoader {
     private final Logger logger;
     private final Path dataDirectory;
     private final String configFileName = "config.yml";
-    private final Set<String> ALLOWED_LANGUAGES = Set.of("zh_cn", "zh_tw", "en_us");
+    // 移除这一行: private final Set<String> ALLOWED_LANGUAGES = Set.of("zh_cn", "zh_tw", "en_us");
 
     private Map<String, Object> config;
     private Map<String, String> serverDisplayNames = new HashMap<>();
@@ -37,112 +31,70 @@ public class ConfigFileLoader {
     public ConfigFileLoader(Logger logger, Path dataDirectory) {
         this.logger = logger;
         this.dataDirectory = dataDirectory;
-        this.config = new HashMap<>();
     }
 
-    public Map<String, Object> getConfig() {
-        return config;
-    }
-
+    /**
+     * 加载配置文件。如果文件不存在或解析失败，则抛出 ConfigFileLoader.ConfigLoadException。
+     * @throws ConfigFileLoader.ConfigLoadException 如果配置文件加载或解析失败
+     */
     public void loadConfig() {
-        File configFile = dataDirectory.resolve(configFileName).toFile();
-        if (!configFile.exists()) {
-            logger.info("Config file not found, creating default one.");
-            try (InputStream in = getClass().getClassLoader().getResourceAsStream(configFileName)) {
-                if (in != null) {
-                    // Files.createDirectories(dataDirectory); // <--- 移除此行
-                    Files.copy(in, configFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    logger.info("Default config file created.");
-                } else {
-                    logger.error("Default config file not found in plugin resources.");
-                }
-            } catch (IOException e) {
-                logger.error("Failed to create default config file: " + e.getMessage());
+        Path configFilePath = dataDirectory.resolve(configFileName);
+        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(configFilePath.toFile()), StandardCharsets.UTF_8)) {
+            Yaml yaml = new Yaml(new Constructor(new LoaderOptions()));
+            this.config = yaml.load(reader);
+            if (this.config == null) {
+                // 如果文件为空或内容无法解析为Map，Yaml.load可能返回null
+                throw new ConfigLoadException("Config file is empty or malformed: " + configFilePath.toAbsolutePath());
             }
-        }
-        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(configFile), StandardCharsets.UTF_8)) {
-            Yaml yaml = new Yaml(new Constructor(Map.class, new LoaderOptions()));
-            config = yaml.load(reader);
-            if (config == null) {
-                config = new HashMap<>();
-                logger.warn("Config file is empty or malformed, initializing empty config.");
-            }
-            loadServerDisplayNames(); // Load server display names after config is loaded
-            logger.info("Config loaded.");
+            logger.info("Config file '{}' loaded.", configFileName);
+            loadServerDisplayNames(); // 配置文件加载成功后加载服务器别名
         } catch (IOException e) {
-            logger.error("Failed to load config file: " + e.getMessage());
-        }
-        // Check config version and restore if needed (if you have versioning logic)
-        // For simplicity, this example doesn't include versioning logic for config.
-    }
-
-    public void saveConfig() {
-        File configFile = dataDirectory.resolve(configFileName).toFile();
-        try {
-            // Files.createDirectories(dataDirectory); // <--- 移除此行
-            try (FileWriter writer = new FileWriter(configFile, StandardCharsets.UTF_8)) {
-                Yaml yaml = new Yaml();
-                yaml.dump(config, writer);
-                logger.info("Config saved.");
-            }
-        } catch (IOException e) {
-            logger.error("Failed to save config file: " + e.getMessage());
+            // 文件不存在或I/O错误
+            throw new ConfigLoadException("Failed to read config file: " + configFilePath.toAbsolutePath(), e);
+        } catch (YAMLException e) {
+            // YAML解析错误
+            throw new ConfigLoadException("Failed to parse config file (YAML syntax error): " + configFilePath.toAbsolutePath(), e);
+        } catch (Exception e) {
+            // 捕获其他任何未预期的运行时异常
+            throw new ConfigLoadException("An unexpected error occurred while loading config file: " + configFilePath.toAbsolutePath(), e);
         }
     }
 
     private void loadServerDisplayNames() {
-        serverDisplayNames.clear(); // Clear previous names
-        Map<String, Object> serversSection = getTable("server_display_names");
-        if (serversSection != null) {
-            serversSection.forEach((key, value) -> {
-                if (value instanceof String) {
-                    serverDisplayNames.put(key.toLowerCase(), (String) value);
-                    logger.debug("Loaded server display name: " + key + " -> " + value);
-                }
-            });
+        this.serverDisplayNames.clear(); // 清除旧的别名
+        @SuppressWarnings("unchecked")
+        List<Map<String, String>> aliasesList = (List<Map<String, String>>) getNestedValue("server-aliases");
+        if (aliasesList != null) {
+            for (Map<String, String> aliasEntry : aliasesList) {
+                aliasEntry.forEach((actualName, displayName) -> {
+                    if (actualName != null && !actualName.isEmpty() && displayName != null && !displayName.isEmpty()) {
+                        serverDisplayNames.put(actualName, displayName);
+                    }
+                });
+            }
+            logger.debug("Loaded {} server display names.", serverDisplayNames.size());
         }
     }
 
-    public String getServerDisplayName(String serverRawName) {
-        return serverDisplayNames.getOrDefault(serverRawName.toLowerCase(), serverRawName);
+    public String getServerDisplayName(String actualName) {
+        return serverDisplayNames.getOrDefault(actualName, actualName);
     }
 
-    private Map<String, Object> getDefaultConfig() {
-        // This method should provide your default config map
-        // For brevity, I'm providing a minimal example. You should fill this based on your actual config.yml
-        Map<String, Object> defaultConfig = new HashMap<>();
-        defaultConfig.put("language", Map.of("default", "en_us"));
-        defaultConfig.put("player_activity", Map.of(
-                "enable_login_message", true,
-                "enable_quit_message", true,
-                "enable_switch_message", true
-        ));
-        defaultConfig.put("server_display_names", new HashMap<>());
-        // Add other default configurations here
-        return defaultConfig;
-    }
-
-    public void restoreDefaultConfig() {
-        File currentConfigFile = dataDirectory.resolve(configFileName).toFile();
-        File backupConfigFile = dataDirectory.resolve(configFileName + ".bak").toFile();
-
-        try {
-            if (currentConfigFile.exists()) {
-                Files.copy(currentConfigFile.toPath(), backupConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                logger.info("Backed up current config to " + backupConfigFile.getName());
-            }
-            try (InputStream in = getClass().getClassLoader().getResourceAsStream(configFileName)) {
-                if (in != null) {
-                    Files.copy(in, currentConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    logger.info("Restored default config file.");
-                } else {
-                    logger.error("Default config file not found in plugin resources for restoration.");
+    @SuppressWarnings("unchecked")
+    private Object getNestedValue(String key) {
+        String[] parts = key.split("\\.");
+        Object current = this.config;
+        for (String part : parts) {
+            if (current instanceof Map) {
+                current = ((Map<String, Object>) current).get(part);
+                if (current == null) {
+                    return null;
                 }
+            } else {
+                return null;
             }
-            loadConfig(); // Reload the newly restored config
-        } catch (IOException e) {
-            logger.error("Failed to restore default config file: " + e.getMessage());
         }
+        return current;
     }
 
     public String getString(String key) {
@@ -184,19 +136,26 @@ public class ConfigFileLoader {
         return null;
     }
 
-    private Object getNestedValue(String key) {
-        String[] parts = key.split("\\.");
-        Object current = this.config;
-        for (String part : parts) {
-            if (current instanceof Map) {
-                current = ((Map<?, ?>) current).get(part);
-                if (current == null) {
-                    return null;
-                }
-            } else {
-                return null;
-            }
+    public String getLanguageKey() {
+        // 仅仅返回配置中的值，不进行有效性检查和回退
+        return getString("language.default", "zh_cn"); // 默认值作为备用，但实际有效性由 LanguageLoader 处理
+    }
+
+    /**
+     * 当配置文件加载或解析失败时抛出的异常。
+     * 定义为 ConfigFileLoader 的静态嵌套类。
+     */
+    public static class ConfigLoadException extends RuntimeException {
+        public ConfigLoadException(String message) {
+            super(message);
         }
-        return current;
+
+        public ConfigLoadException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public ConfigLoadException(Throwable cause) {
+            super(cause);
+        }
     }
 }

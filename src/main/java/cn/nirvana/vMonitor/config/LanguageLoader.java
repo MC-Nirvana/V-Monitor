@@ -1,25 +1,18 @@
-// File: src/main/java/cn/nirvana/vMonitor/config/LanguageLoader.java
 package cn.nirvana.vMonitor.config;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import org.slf4j.Logger;
-
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.error.YAMLException;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.FileWriter; // 新增导入
-
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.charset.StandardCharsets;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +22,7 @@ public class LanguageLoader {
     private final Logger logger;
     private final Path dataDirectory;
     private final ConfigFileLoader configFileLoader;
-    private final String langFolderName = "lang"; // 语言文件子目录名
+    private final String langFolderName = "lang";
 
     private Map<String, Object> language;
 
@@ -40,115 +33,38 @@ public class LanguageLoader {
         this.language = new HashMap<>();
     }
 
+    /**
+     * 加载语言文件。如果文件不存在或解析失败，则抛出 LanguageLoader.LanguageLoadException。
+     * 该方法直接使用从 ConfigFileLoader 获取的语言键来尝试加载。
+     * 如果加载失败，将依赖 VMonitor 的文件修复机制。
+     * @throws LanguageLoader.LanguageLoadException 如果语言文件加载或解析失败
+     */
     public void loadLanguage() {
-        String defaultLang = this.configFileLoader.getString("language.default");
-        String langFileName = defaultLang + ".yml";
-        Path langFilePath = dataDirectory.resolve(langFolderName).resolve(langFileName); // 构建完整的语言文件路径
+        // 从 configFileLoader 获取配置的语言键
+        String configuredLang = configFileLoader.getLanguageKey();
 
-        File langFile = langFilePath.toFile();
+        // 由于有文件修复机制，这里直接尝试加载配置的语言文件。
+        // 不再进行有效性检查和回退逻辑。
+        String langFileName = configuredLang + ".yml";
+        Path langFilePath = dataDirectory.resolve(langFolderName).resolve(langFileName);
 
-        // 检查并复制默认语言文件
-        if (!langFile.exists()) {
-            logger.info("Language file '" + langFileName + "' not found, creating default one.");
-            try (InputStream in = getClass().getClassLoader().getResourceAsStream("lang/" + langFileName)) {
-                if (in != null) {
-                    // Files.createDirectories(dataDirectory.resolve(langFolderName)); // <--- 移除此行 (已在VMonitor中创建)
-                    Files.copy(in, langFilePath, StandardCopyOption.REPLACE_EXISTING);
-                    logger.info("Default language file '" + langFileName + "' created.");
-                } else {
-                    logger.error("Default language file '" + langFileName + "' not found in plugin resources. Falling back to en_us.");
-                    // If specific language file not found, try to load en_us
-                    if (!defaultLang.equals("en_us")) {
-                        loadEnglishAsFallback();
-                        return; // Try to load English, then return.
-                    } else {
-                        logger.error("English language file not found in resources. Cannot load any language.");
-                        return;
-                    }
-                }
-            } catch (IOException e) {
-                logger.error("Failed to create default language file '" + langFileName + "': " + e.getMessage());
+        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(langFilePath.toFile()), StandardCharsets.UTF_8)) {
+            Yaml yaml = new Yaml(new Constructor(new LoaderOptions()));
+            this.language = yaml.load(reader);
+            if (this.language == null) {
+                // 如果文件为空或内容无法解析为Map，Yaml.load可能返回null
+                throw new LanguageLoadException("Language file is empty or malformed: " + langFilePath.toAbsolutePath());
             }
-        }
-
-        // 加载语言文件
-        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(langFile), StandardCharsets.UTF_8)) {
-            Yaml yaml = new Yaml(new Constructor(Map.class, new LoaderOptions()));
-            language = yaml.load(reader);
-            if (language == null) {
-                language = new HashMap<>();
-                logger.warn("Language file '" + langFileName + "' is empty or malformed, initializing empty language map.");
-            }
-            logger.info("Language file '" + langFileName + "' loaded.");
+            logger.info("Language file '{}' loaded.", langFileName);
         } catch (IOException e) {
-            logger.error("Failed to load language file '" + langFileName + "': " + e.getMessage());
-            loadEnglishAsFallback(); // Fallback to English on load error
-        }
-    }
-
-    private void loadEnglishAsFallback() {
-        String englishFileName = "en_us.yml";
-        Path englishLangFilePath = dataDirectory.resolve(langFolderName).resolve(englishFileName);
-        File englishLangFile = englishLangFilePath.toFile();
-
-        if (!englishLangFile.exists()) {
-            try (InputStream in = getClass().getClassLoader().getResourceAsStream("lang/" + englishFileName)) {
-                if (in != null) {
-                    Files.copy(in, englishLangFilePath, StandardCopyOption.REPLACE_EXISTING);
-                    logger.warn("English language file not found, copied default 'en_us.yml'.");
-                } else {
-                    logger.error("Default 'en_us.yml' not found in plugin resources. Cannot provide any language.");
-                }
-            } catch (IOException e) {
-                logger.error("Failed to create default 'en_us.yml': " + e.getMessage());
-            }
-        }
-
-        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(englishLangFile), StandardCharsets.UTF_8)) {
-            Yaml yaml = new Yaml(new Constructor(Map.class, new LoaderOptions()));
-            language = yaml.load(reader);
-            if (language == null) {
-                language = new HashMap<>();
-            }
-            logger.info("Loaded fallback language: 'en_us.yml'.");
-        } catch (IOException e) {
-            logger.error("Failed to load fallback 'en_us.yml': " + e.getMessage());
-            language = new HashMap<>(); // Ensure it's not null on double failure
-        }
-    }
-
-    public void restoreDefaultLanguageFile(String langCode) {
-        String langFileName = langCode + ".yml";
-        Path originalPath = dataDirectory.resolve(langFolderName).resolve(langFileName);
-        Path backupPath = dataDirectory.resolve(langFolderName).resolve(langFileName + ".bak");
-        String resourcePath = "lang/" + langFileName;
-
-        try {
-            if (Files.exists(originalPath)) {
-                Files.copy(originalPath, backupPath, StandardCopyOption.REPLACE_EXISTING);
-                logger.info("Backed up language file " + langFileName + " to " + langFileName + ".bak");
-            }
-            // Files.createDirectories(dataDirectory.resolve(langFolderName)); // <--- 移除此行 (已在VMonitor中创建)
-            if (!copyDefaultFile(resourcePath, originalPath)) {
-                logger.error("Failed to copy a new default language file during restoration. This is critical!");
-            }
-        } catch (IOException e) {
-            logger.error("Failed to rename or copy default language file for restoration: " + e.getMessage());
-        }
-    }
-
-    private boolean copyDefaultFile(String resourcePath, Path targetPath) {
-        try (InputStream in = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
-            if (in != null) {
-                Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                return true;
-            } else {
-                logger.error("Resource not found: " + resourcePath);
-                return false;
-            }
-        } catch (IOException e) {
-            logger.error("Failed to copy resource " + resourcePath + " to " + targetPath + ": " + e.getMessage());
-            return false;
+            // 文件不存在或I/O错误。VMonitor的 loadAndCheckFile 会捕获并处理。
+            throw new LanguageLoadException("Failed to read language file: " + langFilePath.toAbsolutePath(), e);
+        } catch (YAMLException e) {
+            // YAML解析错误。VMonitor的 loadAndCheckFile 会捕获并处理。
+            throw new LanguageLoadException("Failed to parse language file (YAML syntax error): " + langFilePath.toAbsolutePath(), e);
+        } catch (Exception e) {
+            // 捕获其他任何未预期的运行时异常。VMonitor的 loadAndCheckFile 会捕获并处理。
+            throw new LanguageLoadException("An unexpected error occurred while loading language file: " + langFilePath.toAbsolutePath(), e);
         }
     }
 
@@ -185,7 +101,21 @@ public class LanguageLoader {
         return value.toString();
     }
 
-    public Map<String, Object> getLanguage() {
-        return language;
+    /**
+     * 当语言文件加载或解析失败时抛出的异常。
+     * 定义为 LanguageLoader 的静态嵌套类。
+     */
+    public static class LanguageLoadException extends RuntimeException {
+        public LanguageLoadException(String message) {
+            super(message);
+        }
+
+        public LanguageLoadException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public LanguageLoadException(Throwable cause) {
+            super(cause);
+        }
     }
 }
