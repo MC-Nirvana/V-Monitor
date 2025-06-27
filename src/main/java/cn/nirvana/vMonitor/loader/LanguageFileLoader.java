@@ -1,6 +1,4 @@
-package cn.nirvana.vMonitor.config;
-
-import net.kyori.adventure.text.minimessage.MiniMessage;
+package cn.nirvana.vMonitor.loader;
 
 import org.slf4j.Logger;
 import org.yaml.snakeyaml.Yaml;
@@ -18,7 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LanguageLoader {
+public class LanguageFileLoader {
     private final Logger logger;
     private final Path dataDirectory;
     private final ConfigFileLoader configFileLoader;
@@ -26,7 +24,7 @@ public class LanguageLoader {
 
     private Map<String, Object> language;
 
-    public LanguageLoader(Logger logger, Path dataDirectory, ConfigFileLoader configFileLoader) {
+    public LanguageFileLoader(Logger logger, Path dataDirectory, ConfigFileLoader configFileLoader) {
         this.logger = logger;
         this.dataDirectory = dataDirectory;
         this.configFileLoader = configFileLoader;
@@ -34,10 +32,10 @@ public class LanguageLoader {
     }
 
     /**
-     * 加载语言文件。如果文件不存在或解析失败，则抛出 LanguageLoader.LanguageLoadException。
+     * 加载语言文件。如果文件不存在或解析失败，则抛出 LanguageFileLoader.LanguageLoadException。
      * 该方法直接使用从 ConfigFileLoader 获取的语言键来尝试加载。
      * 如果加载失败，将依赖 VMonitor 的文件修复机制。
-     * @throws LanguageLoader.LanguageLoadException 如果语言文件加载或解析失败
+     * @throws LanguageFileLoader.LanguageLoadException 如果语言文件加载或解析失败
      */
     public void loadLanguage() {
         // 从 configFileLoader 获取配置的语言键
@@ -103,7 +101,7 @@ public class LanguageLoader {
 
     /**
      * 当语言文件加载或解析失败时抛出的异常。
-     * 定义为 LanguageLoader 的静态嵌套类。
+     * 定义为 LanguageFileLoader 的静态嵌套类。
      */
     public static class LanguageLoadException extends RuntimeException {
         public LanguageLoadException(String message) {

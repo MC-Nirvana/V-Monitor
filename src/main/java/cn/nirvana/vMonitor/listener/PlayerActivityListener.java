@@ -1,8 +1,8 @@
 package cn.nirvana.vMonitor.listener;
 
-import cn.nirvana.vMonitor.config.ConfigFileLoader; // 导入 ConfigFileLoader
-import cn.nirvana.vMonitor.config.LanguageLoader;
-import cn.nirvana.vMonitor.config.PlayerDataLoader;
+import cn.nirvana.vMonitor.loader.ConfigFileLoader; // 导入 ConfigFileLoader
+import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.DataFileLoader;
 import cn.nirvana.vMonitor.VMonitor;
 
 import com.velocitypowered.api.event.Subscribe;
@@ -25,24 +25,24 @@ import java.util.Optional;
 public class PlayerActivityListener {
     private final ProxyServer proxyServer;
     private final ConfigFileLoader configFileLoader; // 新增注入 ConfigFileLoader
-    private final LanguageLoader languageLoader;
-    private final PlayerDataLoader playerDataLoader;
+    private final LanguageFileLoader languageFileLoader;
+    private final DataFileLoader dataFileLoader;
     private final MiniMessage miniMessage;
     private final VMonitor plugin;
     private final Logger logger; // 新增注入 Logger
 
-    public PlayerActivityListener(ProxyServer proxyServer, ConfigFileLoader configFileLoader, LanguageLoader languageLoader, PlayerDataLoader playerDataLoader, MiniMessage miniMessage, VMonitor plugin, Logger logger) {
+    public PlayerActivityListener(ProxyServer proxyServer, ConfigFileLoader configFileLoader, LanguageFileLoader languageFileLoader, DataFileLoader dataFileLoader, MiniMessage miniMessage, VMonitor plugin, Logger logger) {
         this.proxyServer = proxyServer;
         this.configFileLoader = configFileLoader; // 初始化 ConfigFileLoader
-        this.languageLoader = languageLoader;
-        this.playerDataLoader = playerDataLoader;
+        this.languageFileLoader = languageFileLoader;
+        this.dataFileLoader = dataFileLoader;
         this.miniMessage = miniMessage;
         this.plugin = plugin;
         this.logger = logger;
 
         proxyServer.getScheduler().buildTask(plugin, () -> {
             for (Player player : proxyServer.getAllPlayers()) {
-                playerDataLoader.updatePlayerPlayTime(player.getUniqueId());
+                dataFileLoader.updatePlayerPlayTime(player.getUniqueId());
             }
         }).repeat(1, TimeUnit.MINUTES).schedule();
     }
@@ -53,8 +53,8 @@ public class PlayerActivityListener {
         UUID uuid = player.getUniqueId();
         String playerName = player.getUsername();
         // String ipAddress = player.getRemoteAddress().getAddress().getHostAddress(); // 移除 ipAddress 获取
-        boolean hasJoinedBefore = playerDataLoader.getPlayerName(uuid) != null;
-        playerDataLoader.updatePlayerOnLogin(uuid, playerName); // 移除 ipAddress 参数
+        boolean hasJoinedBefore = dataFileLoader.getPlayerName(uuid) != null;
+        dataFileLoader.updatePlayerOnLogin(uuid, playerName); // 移除 ipAddress 参数
         if (!hasJoinedBefore) {
             sendPlayerActivityMessage("player_activity.first_join", playerName, null, null, true); // 新增 enableCheck 参数
         } else {
@@ -70,7 +70,7 @@ public class PlayerActivityListener {
         String playerName = player.getUsername();
         Optional<RegisteredServer> previousServer = event.getPreviousServer();
         RegisteredServer currentServer = event.getServer();
-        // playerDataLoader.setPlayerCurrentServer(uuid, currentServer.getServerInfo().getName()); // 移除此行，因为 PlayerDataLoader 中没有此方法
+        // dataFileLoader.setPlayerCurrentServer(uuid, currentServer.getServerInfo().getName()); // 移除此行，因为 DataFileLoader 中没有此方法
         if (previousServer.isPresent()) {
             String fromServerName = previousServer.get().getServerInfo().getName();
             String toServerName = currentServer.getServerInfo().getName();
@@ -83,7 +83,7 @@ public class PlayerActivityListener {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         String playerName = player.getUsername();
-        playerDataLoader.updatePlayerOnLogout(uuid, playerName);
+        dataFileLoader.updatePlayerOnLogout(uuid, playerName);
         sendPlayerActivityMessage("player_activity.quit", playerName, null, null, true); // 新增 enableCheck 参数
     }
 
@@ -106,7 +106,7 @@ public class PlayerActivityListener {
             }
 
 
-            String message = languageLoader.getMessage(messageKey);
+            String message = languageFileLoader.getMessage(messageKey);
             if (message != null && !message.isEmpty() && !message.startsWith("<red>Missing Language Key:")) {
                 String formattedMessage = message.replace("{player}", playerName);
                 if (fromServer != null) {

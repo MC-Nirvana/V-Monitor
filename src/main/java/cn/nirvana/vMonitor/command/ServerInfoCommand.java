@@ -1,7 +1,7 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.config.ConfigFileLoader;
-import cn.nirvana.vMonitor.config.LanguageLoader;
+import cn.nirvana.vMonitor.loader.ConfigFileLoader;
+import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -31,14 +31,14 @@ import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
 public class ServerInfoCommand {
     private final ProxyServer proxyServer;
-    private final LanguageLoader languageLoader;
+    private final LanguageFileLoader languageFileLoader;
     private final MiniMessage miniMessage;
     private final ConfigFileLoader configFileLoader;
     private final CommandRegistrar commandRegistrar;
 
-    public ServerInfoCommand(ProxyServer proxyServer, LanguageLoader languageLoader, MiniMessage miniMessage, ConfigFileLoader configFileLoader, CommandRegistrar commandRegistrar) {
+    public ServerInfoCommand(ProxyServer proxyServer, LanguageFileLoader languageFileLoader, MiniMessage miniMessage, ConfigFileLoader configFileLoader, CommandRegistrar commandRegistrar) {
         this.proxyServer = proxyServer;
-        this.languageLoader = languageLoader;
+        this.languageFileLoader = languageFileLoader;
         this.miniMessage = miniMessage;
         this.configFileLoader = configFileLoader;
         this.commandRegistrar = commandRegistrar;
@@ -49,7 +49,7 @@ public class ServerInfoCommand {
         commandRegistrar.registerServerSubCommand(serverNode -> {
             LiteralCommandNode<CommandSource> infoNode = LiteralArgumentBuilder.<CommandSource>literal("info")
                     .executes(context -> {
-                        context.getSource().sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.usage.info")));
+                        context.getSource().sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.usage.info")));
                         return SINGLE_SUCCESS;
                     })
                     .build();
@@ -79,11 +79,11 @@ public class ServerInfoCommand {
             String serverDisplayName = configFileLoader.getServerDisplayName(registeredServer.getServerInfo().getName());
             registeredServer.ping().whenComplete((pingResult, throwable) -> {
                 if (throwable != null || pingResult == null) {
-                    source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.unreachable").replace("{server}", serverDisplayName)));
+                    source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.unreachable").replace("{server}", serverDisplayName)));
                     return;
                 }
                 String motd = PlainTextComponentSerializer.plainText().serialize(pingResult.getDescriptionComponent());
-                String version = pingResult.getVersion() != null ? pingResult.getVersion().getName() : languageLoader.getMessage("global.unknown_version");
+                String version = pingResult.getVersion() != null ? pingResult.getVersion().getName() : languageFileLoader.getMessage("global.unknown_version");
                 int onlinePlayers = 0;
                 int maxPlayers = 0;
                 Optional<ServerPing.Players> playersOptional = pingResult.getPlayers();
@@ -92,7 +92,7 @@ public class ServerInfoCommand {
                     onlinePlayers = players.getOnline();
                     maxPlayers = players.getMax();
                 }
-                String infoMessage = languageLoader.getMessage("commands.server.info.specific_format")
+                String infoMessage = languageFileLoader.getMessage("commands.server.info.specific_format")
                         .replace("{server_name}", serverNameArg)
                         .replace("{server_display_name}", serverDisplayName)
                         .replace("{version}", version)
@@ -101,11 +101,11 @@ public class ServerInfoCommand {
                         .replace("{motd}", motd);
                 source.sendMessage(miniMessage.deserialize(infoMessage));
             }).exceptionally(ex -> {
-                source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.unreachable").replace("{server}", serverDisplayName)));
+                source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.unreachable").replace("{server}", serverDisplayName)));
                 return null;
             });
         } else {
-            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.not_found").replace("{server}", serverNameArg)));
+            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.not_found").replace("{server}", serverNameArg)));
         }
     }
 
@@ -129,14 +129,14 @@ public class ServerInfoCommand {
                                         playersOnline = playersOptional.get().getOnline();
                                         totalOnlinePlayers.addAndGet(playersOnline);
                                     }
-                                    statusMessage = languageLoader.getMessage("commands.server.info.status_online");
+                                    statusMessage = languageFileLoader.getMessage("commands.server.info.status_online");
                                     onlinePlayersDisplay = String.valueOf(playersOnline);
                                 } else {
                                     offlineServersCount.incrementAndGet();
-                                    statusMessage = languageLoader.getMessage("commands.server.info.status_offline");
-                                    onlinePlayersDisplay = languageLoader.getMessage("commands.server.info.no_players_online_info");
+                                    statusMessage = languageFileLoader.getMessage("commands.server.info.status_offline");
+                                    onlinePlayersDisplay = languageFileLoader.getMessage("commands.server.info.no_players_online_info");
                                 }
-                                return languageLoader.getMessage("commands.server.info.server_status_list_format")
+                                return languageFileLoader.getMessage("commands.server.info.server_status_list_format")
                                         .replace("{server_name}", serverName)
                                         .replace("{server_display_name}", serverDisplayName)
                                         .replace("{status}", statusMessage)
@@ -144,11 +144,11 @@ public class ServerInfoCommand {
                             })
                             .exceptionally(ex -> {
                                 offlineServersCount.incrementAndGet();
-                                return languageLoader.getMessage("commands.server.info.server_status_list_format")
+                                return languageFileLoader.getMessage("commands.server.info.server_status_list_format")
                                         .replace("{server_name}", serverName)
                                         .replace("{server_display_name}", serverDisplayName)
-                                        .replace("{status}", languageLoader.getMessage("commands.server.info.status_offline"))
-                                        .replace("{online_players}", languageLoader.getMessage("commands.server.info.no_players_online_info"));
+                                        .replace("{status}", languageFileLoader.getMessage("commands.server.info.status_offline"))
+                                        .replace("{online_players}", languageFileLoader.getMessage("commands.server.info.no_players_online_info"));
                             });
                 })
                 .collect(Collectors.toList());
@@ -158,7 +158,7 @@ public class ServerInfoCommand {
                             .map(CompletableFuture::join)
                             .collect(Collectors.joining("\n"));
                     String proxyVersion = proxyServer.getVersion().getName() + " " + proxyServer.getVersion().getVersion();
-                    String allFormat = languageLoader.getMessage("commands.server.info.all_format")
+                    String allFormat = languageFileLoader.getMessage("commands.server.info.all_format")
                             .replace("{proxy_version}", proxyVersion)
                             .replace("{total_player}", String.valueOf(totalOnlinePlayers.get()))
                             .replace("{server_count}", String.valueOf(proxyServer.getAllServers().size()))

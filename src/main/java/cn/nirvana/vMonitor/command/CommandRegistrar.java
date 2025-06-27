@@ -1,9 +1,7 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.config.LanguageLoader;
+import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 
-import com.mojang.brigadier.Command;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 
@@ -23,7 +21,7 @@ import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 public class CommandRegistrar {
     private final CommandManager commandManager;
     private final ProxyServer proxyServer;
-    private final LanguageLoader languageLoader;
+    private final LanguageFileLoader languageFileLoader;
     private final MiniMessage miniMessage;
 
     private LiteralCommandNode<CommandSource> vmonitorRootNode;
@@ -32,10 +30,10 @@ public class CommandRegistrar {
     private HelpCommand helpCommand;
     private ReloadCommand reloadCommand;
 
-    public CommandRegistrar(CommandManager commandManager, ProxyServer proxyServer, LanguageLoader languageLoader, MiniMessage miniMessage) {
+    public CommandRegistrar(CommandManager commandManager, ProxyServer proxyServer, LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
         this.commandManager = commandManager;
         this.proxyServer = proxyServer;
-        this.languageLoader = languageLoader;
+        this.languageFileLoader = languageFileLoader;
         this.miniMessage = miniMessage;
     }
     public void setHelpCommand(HelpCommand helpCommand) {
@@ -49,7 +47,7 @@ public class CommandRegistrar {
     public void registerCommands() {
         vmonitorRootNode = LiteralArgumentBuilder.<CommandSource>literal("vmonitor")
                 .executes(context -> {
-                    Component message = miniMessage.deserialize(languageLoader.getMessage("commands.version.format"));
+                    Component message = miniMessage.deserialize(languageFileLoader.getMessage("commands.version.format"));
                     context.getSource().sendMessage(message);
                     return SINGLE_SUCCESS;
                 }).build();
@@ -76,14 +74,14 @@ public class CommandRegistrar {
         );
         this.serverSubCommandNode = LiteralArgumentBuilder.<CommandSource>literal("server")
                 .executes(context -> {
-                    context.getSource().sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.help.server_format")));
+                    context.getSource().sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.help.server_format")));
                     return SINGLE_SUCCESS;
                 }).build();
         vmonitorRootNode.addChild(serverSubCommandNode);
         this.pluginSubCommandNode = LiteralArgumentBuilder.<CommandSource>literal("plugin")
                 .requires(source -> source.hasPermission("vmonitor.plugin"))
                 .executes(context -> {
-                    context.getSource().sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.help.plugin_format")));
+                    context.getSource().sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.help.plugin_format")));
                     return SINGLE_SUCCESS;
                 }).build();
         vmonitorRootNode.addChild(pluginSubCommandNode);

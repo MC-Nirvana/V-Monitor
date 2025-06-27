@@ -1,8 +1,7 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.config.LanguageLoader;
+import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import com.velocitypowered.api.command.BrigadierCommand;
@@ -19,21 +18,19 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
 public class PluginListCommand {
     private final ProxyServer proxyServer;
-    private final LanguageLoader languageLoader;
+    private final LanguageFileLoader languageFileLoader;
     private final MiniMessage miniMessage;
     private final CommandRegistrar commandRegistrar;
 
-    public PluginListCommand(ProxyServer proxyServer, LanguageLoader languageLoader,
+    public PluginListCommand(ProxyServer proxyServer, LanguageFileLoader languageFileLoader,
                              MiniMessage miniMessage, CommandRegistrar commandRegistrar) {
         this.proxyServer = proxyServer;
-        this.languageLoader = languageLoader;
+        this.languageFileLoader = languageFileLoader;
         this.miniMessage = miniMessage;
         this.commandRegistrar = commandRegistrar;
         registerPluginListCommand();
@@ -55,20 +52,20 @@ public class PluginListCommand {
     public void execute(CommandSource source) {
         List<PluginContainer> plugins = new ArrayList<>(proxyServer.getPluginManager().getPlugins());
         plugins.sort(Comparator.comparing(p -> p.getDescription().getName().orElse(p.getDescription().getId())));
-        String pluginListFormat = languageLoader.getMessage("commands.plugin.list.format");
-        String pluginLineFormat = languageLoader.getMessage("commands.plugin.list.plugin_line");
-        String pluginListHoverFormat = languageLoader.getMessage("commands.plugin.list.hover_format");
+        String pluginListFormat = languageFileLoader.getMessage("commands.plugin.list.format");
+        String pluginLineFormat = languageFileLoader.getMessage("commands.plugin.list.plugin_line");
+        String pluginListHoverFormat = languageFileLoader.getMessage("commands.plugin.list.hover_format");
         StringBuilder pluginEntries = new StringBuilder();
         for (PluginContainer plugin : plugins) {
             PluginDescription description = plugin.getDescription();
             String id = description.getId();
             String name = description.getName().orElse(id);
-            String version = description.getVersion().orElse(languageLoader.getMessage("global.unknown_version"));
-            String url = description.getUrl().orElse(languageLoader.getMessage("commands.plugin.no_url"));
-            String descriptionText = description.getDescription().orElse(languageLoader.getMessage("commands.plugin.no_description"));
+            String version = description.getVersion().orElse(languageFileLoader.getMessage("global.unknown_version"));
+            String url = description.getUrl().orElse(languageFileLoader.getMessage("commands.plugin.no_url"));
+            String descriptionText = description.getDescription().orElse(languageFileLoader.getMessage("commands.plugin.no_description"));
             String authors = String.join(", ", description.getAuthors());
             if (authors.isEmpty()) {
-                authors = languageLoader.getMessage("commands.plugin.no_authors");
+                authors = languageFileLoader.getMessage("commands.plugin.no_authors");
             }
             String entryLine = pluginLineFormat
                     .replace("{plugin_name}", name)

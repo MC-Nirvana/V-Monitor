@@ -1,7 +1,7 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.config.ConfigFileLoader;
-import cn.nirvana.vMonitor.config.LanguageLoader;
+import cn.nirvana.vMonitor.loader.ConfigFileLoader;
+import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 
 import com.velocitypowered.api.command.CommandSource;
 
@@ -9,12 +9,12 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class ReloadCommand {
     private final ConfigFileLoader configFileLoader;
-    private final LanguageLoader languageLoader;
+    private final LanguageFileLoader languageFileLoader;
     private final MiniMessage miniMessage;
 
-    public ReloadCommand(ConfigFileLoader configFileLoader, LanguageLoader languageLoader, MiniMessage miniMessage) {
+    public ReloadCommand(ConfigFileLoader configFileLoader, LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
         this.configFileLoader = configFileLoader;
-        this.languageLoader = languageLoader;
+        this.languageFileLoader = languageFileLoader;
         this.miniMessage = miniMessage;
     }
 
@@ -24,7 +24,7 @@ public class ReloadCommand {
         } else {
             source.sendMessage(miniMessage.deserialize("<red>Configuration loader not available for reload.</red>"));
         }
-        languageLoader.loadLanguage();
-        source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("global.reload_success")));
+        languageFileLoader.loadLanguage();
+        source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("global.reload_success")));
     }
 }

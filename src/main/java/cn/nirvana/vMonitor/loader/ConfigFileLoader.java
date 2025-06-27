@@ -1,5 +1,5 @@
 // File: src/main/java/cn/nirvana/vMonitor/config/ConfigFileLoader.java
-package cn.nirvana.vMonitor.config;
+package cn.nirvana.vMonitor.loader;
 
 import org.slf4j.Logger;
 import org.yaml.snakeyaml.Yaml;
@@ -8,7 +8,6 @@ import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.error.YAMLException;
 
 import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
@@ -17,7 +16,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set; // 移除 Set<String> ALLOWED_LANGUAGES 的定义
 
 public class ConfigFileLoader {
     private final Logger logger;
@@ -138,7 +136,7 @@ public class ConfigFileLoader {
 
     public String getLanguageKey() {
         // 仅仅返回配置中的值，不进行有效性检查和回退
-        return getString("language.default", "zh_cn"); // 默认值作为备用，但实际有效性由 LanguageLoader 处理
+        return getString("language.default", "zh_cn"); // 默认值作为备用，但实际有效性由 LanguageFileLoader 处理
     }
 
     /**

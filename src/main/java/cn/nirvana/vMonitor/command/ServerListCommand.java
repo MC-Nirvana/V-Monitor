@@ -1,7 +1,7 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.config.ConfigFileLoader;
-import cn.nirvana.vMonitor.config.LanguageLoader;
+import cn.nirvana.vMonitor.loader.ConfigFileLoader;
+import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -17,7 +17,6 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.Collection;
@@ -31,15 +30,15 @@ import static com.mojang.brigadier.arguments.StringArgumentType.word;
 public class ServerListCommand {
     private final ProxyServer proxyServer;
     private final ConfigFileLoader configFileLoader;
-    private final LanguageLoader languageLoader;
+    private final LanguageFileLoader languageFileLoader;
     private final MiniMessage miniMessage;
     private final CommandRegistrar commandRegistrar;
 
-    public ServerListCommand(ProxyServer proxyServer, ConfigFileLoader configFileLoader, LanguageLoader languageLoader,
+    public ServerListCommand(ProxyServer proxyServer, ConfigFileLoader configFileLoader, LanguageFileLoader languageFileLoader,
                              MiniMessage miniMessage, CommandRegistrar commandRegistrar) {
         this.proxyServer = proxyServer;
         this.configFileLoader = configFileLoader;
-        this.languageLoader = languageLoader;
+        this.languageFileLoader = languageFileLoader;
         this.miniMessage = miniMessage;
         this.commandRegistrar = commandRegistrar;
         registerCommands();
@@ -49,7 +48,7 @@ public class ServerListCommand {
         commandRegistrar.registerServerSubCommand(serverNode -> {
             LiteralCommandNode<CommandSource> listNode = LiteralArgumentBuilder.<CommandSource>literal("list")
                     .executes(context -> {
-                        context.getSource().sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.usage.list")));
+                        context.getSource().sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.usage.list")));
                         return SINGLE_SUCCESS;
                     })
                     .build();
@@ -83,7 +82,7 @@ public class ServerListCommand {
             Collection<Player> players = registeredServer.getPlayersConnected();
             String playersDisplay;
             if (players.isEmpty()) {
-                playersDisplay = languageLoader.getMessage("commands.server.list.no_players_online_info");
+                playersDisplay = languageFileLoader.getMessage("commands.server.list.no_players_online_info");
             } else {
                 playersDisplay = "<green>" + players.stream()
                         .map(Player::getUsername)
@@ -93,7 +92,7 @@ public class ServerListCommand {
 
             allPlayersListBuilder.append(serverEntry).append(": ").append(playersDisplay).append("\n");
         });
-        String allFormat = languageLoader.getMessage("commands.server.list.all_format")
+        String allFormat = languageFileLoader.getMessage("commands.server.list.all_format")
                 .replace("{online_players_count}", String.valueOf(totalOnlinePlayers))
                 .replace("{all_players_list}", allPlayersListBuilder.toString().trim());
         source.sendMessage(miniMessage.deserialize(allFormat));
@@ -107,20 +106,20 @@ public class ServerListCommand {
             Collection<Player> players = registeredServer.getPlayersConnected();
             String specificPlayersListContent;
             if (players.isEmpty()) {
-                specificPlayersListContent = languageLoader.getMessage("commands.server.list.no_players_online_info");
+                specificPlayersListContent = languageFileLoader.getMessage("commands.server.list.no_players_online_info");
             } else {
                 specificPlayersListContent = "<green>" + players.stream()
                         .map(Player::getUsername)
                         .collect(Collectors.joining(", ")) + "</green>";
             }
-            String specificFormat = languageLoader.getMessage("commands.server.list.specific_format")
+            String specificFormat = languageFileLoader.getMessage("commands.server.list.specific_format")
                     .replace("{server_display_name}", serverDisplayName)
                     .replace("{online_players_number}", String.valueOf(players.size()))
                     .replace("{specific_players_list}", specificPlayersListContent);
             source.sendMessage(miniMessage.deserialize(specificFormat));
 
         } else {
-            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.not_found").replace("{server}", serverNameArg)));
+            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.not_found").replace("{server}", serverNameArg)));
         }
     }
 

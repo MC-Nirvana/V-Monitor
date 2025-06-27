@@ -3,14 +3,13 @@ package cn.nirvana.vMonitor;
 
 import cn.nirvana.vMonitor.command.*;
 import cn.nirvana.vMonitor.command.ServerInfoCommand;
-import cn.nirvana.vMonitor.config.ConfigFileLoader;
-import cn.nirvana.vMonitor.config.LanguageLoader;
-import cn.nirvana.vMonitor.config.PlayerDataLoader;
+import cn.nirvana.vMonitor.loader.ConfigFileLoader;
+import cn.nirvana.vMonitor.loader.DataFileLoader;
+import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 import cn.nirvana.vMonitor.listener.PlayerActivityListener;
 
 import com.google.inject.Inject;
 
-import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
@@ -36,9 +35,9 @@ public class VMonitor {
     private final ProxyServer proxyServer;
     private final Logger logger;
     private final Path dataDirectory;
-    private LanguageLoader languageLoader;
+    private LanguageFileLoader languageFileLoader;
     private ConfigFileLoader configFileLoader;
-    private PlayerDataLoader playerDataLoader;
+    private DataFileLoader dataFileLoader;
     private MiniMessage miniMessage;
 
     // 硬编码支持的语言文件列表，确保所有语言文件都被复制
@@ -81,36 +80,36 @@ public class VMonitor {
         }
 
         // 3. 检查并加载语言文件 (依赖于 configFileLoader)
-        this.languageLoader = new LanguageLoader(logger, dataDirectory, configFileLoader);
+        this.languageFileLoader = new LanguageFileLoader(logger, dataDirectory, configFileLoader);
         // <<<<<<<<<<<<< 修正这里: 从 configFileLoader 获取语言键 >>>>>>>>>>>>>
         String defaultLanguageKeyFromConfig = configFileLoader.getLanguageKey();
-        if (!loadAndCheckFile(languageLoader, defaultLanguageKeyFromConfig + ".yml", LANG_FOLDER_NAME)) { // <-- 使用获取到的语言键
+        if (!loadAndCheckFile(languageFileLoader, defaultLanguageKeyFromConfig + ".yml", LANG_FOLDER_NAME)) { // <-- 使用获取到的语言键
             logger.error("Failed to load and validate language file. V-Monitor will not enable properly.");
             return;
         }
 
         // 4. 检查并加载玩家数据文件
-        this.playerDataLoader = new PlayerDataLoader(logger, dataDirectory);
-        if (!loadAndCheckFile(playerDataLoader, PLAYER_DATA_FILE_NAME, null)) {
+        this.dataFileLoader = new DataFileLoader(logger, dataDirectory);
+        if (!loadAndCheckFile(dataFileLoader, PLAYER_DATA_FILE_NAME, null)) {
             logger.error("Failed to load and validate player data file. V-Monitor will not enable properly.");
             return;
         }
-        this.playerDataLoader.checkAndSetServerBootTime(); // 数据加载并验证后设置启动时间
+        this.dataFileLoader.checkAndSetServerBootTime(); // 数据加载并验证后设置启动时间
 
         // 注册事件监听器
-        this.proxyServer.getEventManager().register(this, new PlayerActivityListener(proxyServer, configFileLoader, languageLoader, playerDataLoader, miniMessage, this, logger));
+        this.proxyServer.getEventManager().register(this, new PlayerActivityListener(proxyServer, configFileLoader, languageFileLoader, dataFileLoader, miniMessage, this, logger));
 
         // 注册命令
-        CommandRegistrar commandRegistrar = new CommandRegistrar(proxyServer.getCommandManager(), proxyServer, languageLoader, miniMessage);
-        HelpCommand helpCommandInstance = new HelpCommand(languageLoader, miniMessage);
-        ReloadCommand reloadCommandInstance = new ReloadCommand(configFileLoader, languageLoader, miniMessage);
+        CommandRegistrar commandRegistrar = new CommandRegistrar(proxyServer.getCommandManager(), proxyServer, languageFileLoader, miniMessage);
+        HelpCommand helpCommandInstance = new HelpCommand(languageFileLoader, miniMessage);
+        ReloadCommand reloadCommandInstance = new ReloadCommand(configFileLoader, languageFileLoader, miniMessage);
         commandRegistrar.setHelpCommand(helpCommandInstance);
         commandRegistrar.setReloadCommand(reloadCommandInstance);
         commandRegistrar.registerCommands();
-        new ServerListCommand(proxyServer, configFileLoader, languageLoader, miniMessage, commandRegistrar);
-        new ServerInfoCommand(proxyServer, languageLoader, miniMessage, configFileLoader, commandRegistrar);
-        new PluginListCommand(proxyServer, languageLoader, miniMessage, commandRegistrar);
-        new PluginInfoCommand(proxyServer, languageLoader, miniMessage, commandRegistrar);
+        new ServerListCommand(proxyServer, configFileLoader, languageFileLoader, miniMessage, commandRegistrar);
+        new ServerInfoCommand(proxyServer, languageFileLoader, miniMessage, configFileLoader, commandRegistrar);
+        new PluginListCommand(proxyServer, languageFileLoader, miniMessage, commandRegistrar);
+        new PluginInfoCommand(proxyServer, languageFileLoader, miniMessage, commandRegistrar);
 
         logger.info("V-Monitor enabled!");
     }
@@ -119,7 +118,7 @@ public class VMonitor {
     public void onProxyShutdown(ProxyShutdownEvent event) {
         logger.info("V-Monitor is disabling...");
         logger.info("Saving player data...");
-        playerDataLoader.savePlayerData();
+        dataFileLoader.savePlayerData();
         logger.info("Saved player data!");
         logger.info("V-Monitor disabled!");
     }
@@ -128,7 +127,7 @@ public class VMonitor {
      * 辅助方法：处理文件加载和完整性检查。
      * 如果文件加载失败（抛出自定义异常），则尝试修复：重命名损坏文件并复制默认文件。
      *
-     * @param loader 要调用的 Loader 实例 (ConfigFileLoader, LanguageLoader, PlayerDataLoader)
+     * @param loader 要调用的 Loader 实例 (ConfigFileLoader, LanguageFileLoader, DataFileLoader)
      * @param fileName 文件的名称 (例如 "config.yml", "zh_cn.yml", "data.json")
      * @param subDirectoryName 如果文件在子目录中 (例如 "lang")，则提供子目录名，否则为 null
      * @return 如果文件成功加载并验证（或成功修复并加载）则返回 true，否则返回 false。
@@ -149,13 +148,13 @@ public class VMonitor {
             // 尝试加载文件
             if (loader instanceof ConfigFileLoader) {
                 ((ConfigFileLoader) loader).loadConfig();
-            } else if (loader instanceof LanguageLoader) {
-                ((LanguageLoader) loader).loadLanguage();
-            } else if (loader instanceof PlayerDataLoader) {
-                ((PlayerDataLoader) loader).loadPlayerData();
+            } else if (loader instanceof LanguageFileLoader) {
+                ((LanguageFileLoader) loader).loadLanguage();
+            } else if (loader instanceof DataFileLoader) {
+                ((DataFileLoader) loader).loadPlayerData();
             }
             return true; // 文件加载成功
-        } catch (ConfigFileLoader.ConfigLoadException | LanguageLoader.LanguageLoadException | PlayerDataLoader.PlayerDataLoadException e) { // 更新此处引用
+        } catch (ConfigFileLoader.ConfigLoadException | LanguageFileLoader.LanguageLoadException | DataFileLoader.PlayerDataLoadException e) { // 更新此处引用
             logger.error("Failed to load and parse '{}' due to: {}. Attempting to repair...", filePath.getFileName(), e.getMessage());
             logger.error("Stack trace for load failure:", e);
 
@@ -186,14 +185,14 @@ public class VMonitor {
                     try {
                         if (loader instanceof ConfigFileLoader) {
                             ((ConfigFileLoader) loader).loadConfig();
-                        } else if (loader instanceof LanguageLoader) {
-                            ((LanguageLoader) loader).loadLanguage();
-                        } else if (loader instanceof PlayerDataLoader) {
-                            ((PlayerDataLoader) loader).loadPlayerData();
+                        } else if (loader instanceof LanguageFileLoader) {
+                            ((LanguageFileLoader) loader).loadLanguage();
+                        } else if (loader instanceof DataFileLoader) {
+                            ((DataFileLoader) loader).loadPlayerData();
                         }
                         logger.info("Successfully loaded repaired '{}'.", filePath.getFileName());
                         return true;
-                    } catch (ConfigFileLoader.ConfigLoadException | LanguageLoader.LanguageLoadException | PlayerDataLoader.PlayerDataLoadException reLoadE) { // 更新此处引用
+                    } catch (ConfigFileLoader.ConfigLoadException | LanguageFileLoader.LanguageLoadException | DataFileLoader.PlayerDataLoadException reLoadE) { // 更新此处引用
                         logger.error("Failed to load newly copied default '{}'. This indicates a problem with the default resource or loader logic: {}", filePath.getFileName(), reLoadE.getMessage());
                         logger.error("Stack trace for re-load failure:", reLoadE);
                         return false; // 即使复制了默认文件，新默认文件也无法加载，插件无法正常工作
@@ -314,12 +313,12 @@ public class VMonitor {
         return configFileLoader;
     }
 
-    public LanguageLoader getLanguageLoader() {
-        return languageLoader;
+    public LanguageFileLoader getLanguageLoader() {
+        return languageFileLoader;
     }
 
-    public PlayerDataLoader getPlayerDataLoader() {
-        return playerDataLoader;
+    public DataFileLoader getPlayerDataLoader() {
+        return dataFileLoader;
     }
 
     public Logger getLogger() {

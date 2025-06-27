@@ -1,5 +1,5 @@
-// File: src/main/java/cn/nirvana/vMonitor/config/PlayerDataLoader.java
-package cn.nirvana.vMonitor.config;
+// File: src/main/java/cn/nirvana/vMonitor/config/DataFileLoader.java
+package cn.nirvana.vMonitor.loader;
 
 import cn.nirvana.vMonitor.util.TimeUtil;
 
@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class PlayerDataLoader {
+public class DataFileLoader {
     private final Logger logger;
     private final Path dataDirectory;
     private final String playerDataFileName = "data.json";
@@ -125,14 +125,14 @@ public class PlayerDataLoader {
         }
     }
 
-    public PlayerDataLoader(Logger logger, Path dataDirectory) {
+    public DataFileLoader(Logger logger, Path dataDirectory) {
         this.logger = logger;
         this.dataDirectory = dataDirectory;
     }
 
     /**
-     * 加载玩家数据文件。如果文件不存在或解析失败，则抛出 PlayerDataLoader.PlayerDataLoadException。
-     * @throws PlayerDataLoader.PlayerDataLoadException 如果玩家数据文件加载或解析失败
+     * 加载玩家数据文件。如果文件不存在或解析失败，则抛出 DataFileLoader.PlayerDataLoadException。
+     * @throws DataFileLoader.PlayerDataLoadException 如果玩家数据文件加载或解析失败
      */
     public void loadPlayerData() {
         Path playerDataFile = dataDirectory.resolve(playerDataFileName);
