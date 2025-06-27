@@ -31,7 +31,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set; // 导入 Set
 
-@Plugin(id = "v-monitor", name = "V-Monitor", version = "1.2.1", url = "https://github.com/MC-Nirvana/V-Monitor", description = "Monitor your Velocity Proxy player activity, server status, and generate daily/weekly reports.", authors = {"MC_Nirvana"})
+@Plugin(id = "v-monitor", name = "V-Monitor", version = "1.3.0", url = "https://github.com/MC-Nirvana/V-Monitor", description = "Monitor your Velocity Proxy player activity, server status, and generate daily/weekly reports.", authors = {"MC_Nirvana"})
 public class VMonitor {
     private final ProxyServer proxyServer;
     private final Logger logger;
