@@ -1,4 +1,3 @@
-// File: src/main/java/cn/nirvana/vMonitor/config/DataFileLoader.java
 package cn.nirvana.vMonitor.loader;
 
 import cn.nirvana.vMonitor.util.TimeUtil;
@@ -7,6 +6,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.JsonSyntaxException;
+
+import com.velocitypowered.api.proxy.server.RegisteredServer;
+
 import org.slf4j.Logger;
 
 import java.io.FileInputStream;
@@ -60,12 +62,16 @@ public class DataFileLoader {
         public Map<String, DailyNewPlayersData> newPlayersToday;
         public Map<String, Integer> totalLoginCountsInDay;
         public Map<String, Long> totalPlayTimesInDay;
+        public Map<String, Integer> totalServerLoginCounts;
+        public Map<String, Map<String, Integer>> dailyServerLoginCounts;
 
         public ServerData() {
             this.lastReportGenerationDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             this.newPlayersToday = new ConcurrentHashMap<>();
             this.totalLoginCountsInDay = new ConcurrentHashMap<>();
             this.totalPlayTimesInDay = new ConcurrentHashMap<>();
+            this.totalServerLoginCounts = new ConcurrentHashMap<>();
+            this.dailyServerLoginCounts = new ConcurrentHashMap<>();
         }
     }
 
@@ -88,6 +94,7 @@ public class DataFileLoader {
         public int totalLoginCount;
         public Map<String, DailyLoginData> dailyLogins;
         public Map<String, WeeklyLoginData> weeklyLogins;
+        public Map<String, Integer> loggedInServerLoginCounts;
 
         public PlayerData(String playerName, String firstJoinTime) {
             this.playerName = playerName;
@@ -98,6 +105,7 @@ public class DataFileLoader {
             this.totalLoginCount = 0;
             this.dailyLogins = new ConcurrentHashMap<>();
             this.weeklyLogins = new ConcurrentHashMap<>();
+            this.loggedInServerLoginCounts = new ConcurrentHashMap<>();
         }
     }
 
@@ -130,21 +138,14 @@ public class DataFileLoader {
         this.dataDirectory = dataDirectory;
     }
 
-    /**
-     * 加载玩家数据文件。如果文件不存在或解析失败，则抛出 DataFileLoader.PlayerDataLoadException。
-     * @throws DataFileLoader.PlayerDataLoadException 如果玩家数据文件加载或解析失败
-     */
     public void loadPlayerData() {
         Path playerDataFile = dataDirectory.resolve(playerDataFileName);
-
         try (InputStreamReader reader = new InputStreamReader(new FileInputStream(playerDataFile.toFile()), StandardCharsets.UTF_8)) {
             TypeToken<RootData> typeToken = new TypeToken<>() {};
             this.rootData = gson.fromJson(reader, typeToken.getType());
             if (this.rootData == null) {
-                // 如果文件为空或内容无法解析为 RootData，fromJson可能返回null
                 throw new PlayerDataLoadException("Player data file is empty or malformed: " + playerDataFile.toAbsolutePath());
             }
-            // 确保内部结构也非空，防止NPE
             if (this.rootData.server == null) {
                 this.rootData.server = new ServerData();
             }
@@ -160,15 +161,29 @@ public class DataFileLoader {
             if (this.rootData.server.totalPlayTimesInDay == null) {
                 this.rootData.server.totalPlayTimesInDay = new ConcurrentHashMap<>();
             }
+            if (this.rootData.server.totalServerLoginCounts == null) {
+                this.rootData.server.totalServerLoginCounts = new ConcurrentHashMap<>();
+            }
+            if (this.rootData.server.dailyServerLoginCounts == null) {
+                this.rootData.server.dailyServerLoginCounts = new ConcurrentHashMap<>();
+            }
+            for (PlayerData player : this.rootData.players.values()) {
+                if (player.dailyLogins == null) {
+                    player.dailyLogins = new ConcurrentHashMap<>();
+                }
+                if (player.weeklyLogins == null) {
+                    player.weeklyLogins = new ConcurrentHashMap<>();
+                }
+                if (player.loggedInServerLoginCounts == null) {
+                    player.loggedInServerLoginCounts = new ConcurrentHashMap<>();
+                }
+            }
             logger.info("Player data loaded successfully.");
         } catch (IOException e) {
-            // 文件不存在或I/O错误
             throw new PlayerDataLoadException("Failed to read player data file: " + playerDataFile.toAbsolutePath(), e);
         } catch (JsonSyntaxException e) {
-            // JSON解析错误，表示文件内容损坏或语法错误
             throw new PlayerDataLoadException("Failed to parse player data file (JSON syntax error): " + playerDataFile.toAbsolutePath(), e);
         } catch (Exception e) {
-            // 捕获其他任何未预期的运行时异常
             throw new PlayerDataLoadException("An unexpected error occurred while loading player data file: " + playerDataFile.toAbsolutePath(), e);
         }
     }
@@ -191,6 +206,7 @@ public class DataFileLoader {
         String currentTime = LocalDateTime.now().format(dateFormatWithTime);
         String currentTimeWithSeconds = LocalDateTime.now().format(dateFormatWithSeconds);
         String todayDate = LocalDate.now().format(dateFormatNoTime);
+        String currentWeek = LocalDate.now().format(weekFormatter);
         PlayerData data = rootData.players.computeIfAbsent(uuid, k -> {
             String firstJoinTime = LocalDateTime.now().format(dateFormatWithTime);
             PlayerData newPlayer = new PlayerData(playerName, firstJoinTime);
@@ -200,212 +216,108 @@ public class DataFileLoader {
             return newPlayer;
         });
         data.playerName = playerName;
-        if (!data.lastLoginTime.isEmpty() && data.lastQuitTime.isEmpty()) {
-            try {
-                LocalDateTime lastLogin = LocalDateTime.parse(data.lastLoginTime, dateFormatWithTime);
-                LocalDateTime now = LocalDateTime.now();
-                Duration sessionDuration = Duration.between(lastLogin, now);
-                long sessionSeconds = sessionDuration.getSeconds();
-                if (sessionSeconds < 0) sessionSeconds = 0;
-                data.totalPlayTime += sessionSeconds;
-                DailyLoginData dailyData = data.dailyLogins.computeIfAbsent(todayDate, k -> new DailyLoginData());
-                dailyData.totalPlayTimeInDay += sessionSeconds;
-                String currentWeek = LocalDate.now().format(weekFormatter);
-                WeeklyLoginData weeklyData = data.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
-                weeklyData.totalPlayTimeInWeek += sessionSeconds;
-                rootData.server.totalPlayTimesInDay.merge(todayDate, sessionSeconds, Long::sum);
-            } catch (Exception e) {
-                logger.warn("Failed to parse last login time for player {} during new login (unrecorded session): {}", playerName, e.getMessage());
-            }
-        }
         data.lastLoginTime = currentTime;
-        data.lastQuitTime = "";
         data.totalLoginCount++;
-        DailyLoginData dailyData = data.dailyLogins.computeIfAbsent(todayDate, k -> new DailyLoginData());
+        DailyLoginData dailyData = data.dailyLogins.computeIfAbsent(todayDate, d -> new DailyLoginData());
         dailyData.loginCount++;
         dailyData.lastLoginTime = currentTimeWithSeconds;
-        String currentWeek = LocalDate.now().format(weekFormatter);
-        WeeklyLoginData weeklyData = data.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
+        WeeklyLoginData weeklyData = data.weeklyLogins.computeIfAbsent(currentWeek, w -> new WeeklyLoginData());
         weeklyData.loginCount++;
         weeklyData.lastLoginTime = currentTimeWithSeconds;
         rootData.server.totalLoginCountsInDay.merge(todayDate, 1, Integer::sum);
-        savePlayerData();
     }
 
-    public void updatePlayerOnLogout(UUID uuid, String playerName) {
+    public void updatePlayerOnQuit(UUID uuid, String playerName, RegisteredServer server, Duration sessionDuration) {
         String currentTime = LocalDateTime.now().format(dateFormatWithTime);
         String todayDate = LocalDate.now().format(dateFormatNoTime);
+        String currentWeek = LocalDate.now().format(weekFormatter);
         PlayerData data = rootData.players.get(uuid);
         if (data != null) {
-            if (!data.lastLoginTime.isEmpty() && data.lastQuitTime.isEmpty()) {
-                data.lastQuitTime = currentTime;
-                try {
-                    LocalDateTime lastLogin = LocalDateTime.parse(data.lastLoginTime, dateFormatWithTime);
-                    LocalDateTime currentLogout = LocalDateTime.parse(data.lastQuitTime, dateFormatWithTime);
-                    Duration sessionDuration = Duration.between(lastLogin, currentLogout);
-                    long sessionSeconds = sessionDuration.getSeconds();
-                    if (sessionSeconds < 0) sessionSeconds = 0;
-                    data.totalPlayTime += sessionSeconds;
-                    DailyLoginData dailyData = data.dailyLogins.computeIfAbsent(todayDate, k -> new DailyLoginData());
-                    dailyData.totalPlayTimeInDay += sessionSeconds;
-                    String currentWeek = LocalDate.now().format(weekFormatter);
-                    WeeklyLoginData weeklyData = data.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
-                    weeklyData.totalPlayTimeInWeek += sessionSeconds;
-                    rootData.server.totalPlayTimesInDay.merge(todayDate, sessionSeconds, Long::sum);
-                } catch (Exception e) {
-                    logger.warn("Failed to parse login/logout time for player {} during logout: {}", playerName, e.getMessage());
-                }
-            } else {
-                logger.debug("Player {} not in an active login state (lastLoginTime empty or lastQuitTime already set). Skipping play time calculation on logout.", playerName);
+            data.lastQuitTime = currentTime;
+            data.totalPlayTime += sessionDuration.getSeconds();
+            DailyLoginData dailyData = data.dailyLogins.get(todayDate);
+            if (dailyData != null) {
+                dailyData.totalPlayTimeInDay += sessionDuration.getSeconds();
             }
-            savePlayerData();
+            WeeklyLoginData weeklyData = data.weeklyLogins.get(currentWeek);
+            if (weeklyData != null) {
+                weeklyData.totalPlayTimeInWeek += sessionDuration.getSeconds();
+            }
+            rootData.server.totalPlayTimesInDay.merge(todayDate, sessionDuration.getSeconds(), Long::sum);
         }
     }
 
-    public void updatePlayerPlayTime(UUID uuid) {
-        PlayerData data = rootData.players.get(uuid);
+    public void updatePlayerServerLogin(UUID uuid, String serverName) {
         String todayDate = LocalDate.now().format(dateFormatNoTime);
-        if (data != null && !data.lastLoginTime.isEmpty() && data.lastQuitTime.isEmpty()) {
-            long addedSeconds = 60;
-            data.totalPlayTime += addedSeconds;
-            DailyLoginData dailyData = data.dailyLogins.computeIfAbsent(todayDate, k -> new DailyLoginData());
-            dailyData.totalPlayTimeInDay += addedSeconds;
+        String currentTimeWithSeconds = LocalDateTime.now().format(dateFormatWithSeconds);
+
+        PlayerData playerData = rootData.players.get(uuid);
+        if (playerData != null) {
+            playerData.loggedInServerLoginCounts.merge(serverName, 1, Integer::sum);
+            rootData.server.totalServerLoginCounts.merge(serverName, 1, Integer::sum);
+            Map<String, Integer> dailyCountsForServer = rootData.server.dailyServerLoginCounts.computeIfAbsent(todayDate, k -> new ConcurrentHashMap<>());
+            dailyCountsForServer.merge(serverName, 1, Integer::sum);
             String currentWeek = LocalDate.now().format(weekFormatter);
-            WeeklyLoginData weeklyData = data.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
-            weeklyData.totalPlayTimeInWeek += addedSeconds;
-            rootData.server.totalPlayTimesInDay.merge(todayDate, addedSeconds, Long::sum);
-            savePlayerData();
-        }
-    }
-
-    public void checkAndSetServerBootTime() {
-        if (rootData.server == null) {
-            rootData.server = new ServerData();
-        }
-        if (rootData.server.bootTime == null || rootData.server.bootTime.isEmpty()) {
-            rootData.server.bootTime = LocalDate.now().format(dateFormatNoTime);
-            logger.info("Server boot time initialized to: " + rootData.server.bootTime);
-            rootData.server.lastReportGenerationDate = LocalDate.now().format(dateFormatNoTime);
-            String currentBootDate = rootData.server.bootTime;
-            rootData.server.newPlayersToday.putIfAbsent(currentBootDate, new DailyNewPlayersData());
-            rootData.server.totalLoginCountsInDay.putIfAbsent(currentBootDate, 0);
-            rootData.server.totalPlayTimesInDay.putIfAbsent(currentBootDate, 0L);
-
-            savePlayerData();
-        } else {
-            String currentReportDate = LocalDate.now().format(dateFormatNoTime);
-            if (!rootData.server.lastReportGenerationDate.equals(currentReportDate)) {
-                rootData.server.lastReportGenerationDate = currentReportDate;
-                savePlayerData();
-                logger.info("Server last report generation date updated to: " + currentReportDate);
+            DailyLoginData dailyData = playerData.dailyLogins.get(todayDate);
+            if (dailyData != null) {
+                dailyData.lastLoginTime = currentTimeWithSeconds;
             }
-            logger.info("Server boot time is already set to: " + rootData.server.bootTime + ". Not updating automatically.");
+            WeeklyLoginData weeklyData = playerData.weeklyLogins.get(currentWeek);
+            if (weeklyData != null) {
+                weeklyData.lastLoginTime = currentTimeWithSeconds;
+            }
         }
     }
 
-    public String getPlayerName(UUID uuid) {
-        PlayerData data = rootData.players.get(uuid);
-        return data != null ? data.playerName : null;
+    public RootData getRootData() {
+        return rootData;
     }
 
-    public String getPlayerFirstJoinTime(UUID uuid) {
-        PlayerData data = rootData.players.get(uuid);
-        return data != null ? data.firstJoinTime : null;
+    public PlayerData getPlayerData(UUID uuid) {
+        return rootData.players.get(uuid);
     }
 
-    public Long getPlayerTotalPlayTime(UUID uuid) {
-        PlayerData data = rootData.players.get(uuid);
-        return data != null ? data.totalPlayTime : 0L;
+    public Map<String, DailyNewPlayersData> getNewPlayersTodayData() {
+        return rootData.server.newPlayersToday;
     }
 
-    public int getPlayerTotalLoginCount(UUID uuid) {
-        PlayerData data = rootData.players.get(uuid);
-        return data != null ? data.totalLoginCount : 0;
+    public Map<String, Integer> getTotalLoginCountsInDay() {
+        return rootData.server.totalLoginCountsInDay;
+    }
+
+    public Map<String, Long> getTotalPlayTimesInDay() {
+        return rootData.server.totalPlayTimesInDay;
+    }
+
+    public String getLastReportGenerationDate() {
+        return rootData.server.lastReportGenerationDate;
+    }
+
+    public void setLastReportGenerationDate(String date) {
+        rootData.server.lastReportGenerationDate = date;
+    }
+
+    public Map<String, Integer> getTotalServerLoginCounts() {
+        return rootData.server.totalServerLoginCounts;
+    }
+
+    public Map<String, Map<String, Integer>> getDailyServerLoginCounts() {
+        return rootData.server.dailyServerLoginCounts;
     }
 
     public DailyLoginData getPlayerDailyLoginData(UUID uuid, String date) {
-        PlayerData data = rootData.players.get(uuid);
-        return data != null ? data.dailyLogins.get(date) : null;
+        PlayerData playerData = getPlayerData(uuid);
+        return playerData != null ? playerData.dailyLogins.get(date) : null;
     }
 
-    public int getPlayerDailyLoginCount(UUID uuid) {
-        String todayDate = LocalDate.now().format(dateFormatNoTime);
-        DailyLoginData dailyData = getPlayerDailyLoginData(uuid, todayDate);
-        return dailyData != null ? dailyData.loginCount : 0;
-    }
-
-    public Long getPlayerDailyPlayTime(UUID uuid) {
-        String todayDate = LocalDate.now().format(dateFormatNoTime);
-        DailyLoginData dailyData = getPlayerDailyLoginData(uuid, todayDate);
-        return dailyData != null ? dailyData.totalPlayTimeInDay : 0L;
-    }
-
-    public String getPlayerDailyLastLoginTime(UUID uuid) {
-        String todayDate = LocalDate.now().format(dateFormatNoTime);
-        DailyLoginData dailyData = getPlayerDailyLoginData(uuid, todayDate);
-        return dailyData != null ? dailyData.lastLoginTime : null;
-    }
-
-    // --- Weekly Login Data Getters ---
     public WeeklyLoginData getPlayerWeeklyLoginData(UUID uuid, String week) {
-        PlayerData data = rootData.players.get(uuid);
-        return data != null ? data.weeklyLogins.get(week) : null;
+        PlayerData playerData = getPlayerData(uuid);
+        return playerData != null ? playerData.weeklyLogins.get(week) : null;
     }
 
-    public int getPlayerWeeklyLoginCount(UUID uuid) {
-        String currentWeek = LocalDate.now().format(weekFormatter);
-        WeeklyLoginData weeklyData = getPlayerWeeklyLoginData(uuid, currentWeek);
-        return weeklyData != null ? weeklyData.loginCount : 0;
-    }
-
-    public Long getPlayerWeeklyPlayTime(UUID uuid) {
-        String currentWeek = LocalDate.now().format(weekFormatter);
-        WeeklyLoginData weeklyData = getPlayerWeeklyLoginData(uuid, currentWeek);
-        return weeklyData != null ? weeklyData.totalPlayTimeInWeek : 0L;
-    }
-
-    public String getPlayerWeeklyLastLoginTime(UUID uuid) {
-        String currentWeek = LocalDate.now().format(weekFormatter);
-        WeeklyLoginData weeklyData = getPlayerWeeklyLoginData(uuid, currentWeek);
-        return weeklyData != null ? weeklyData.lastLoginTime : null;
-    }
-
-    public String getServerBootTime() {
-        return rootData.server != null ? rootData.server.bootTime : null;
-    }
-
-    public String getServerLastReportGenerationDate() {
-        return rootData.server != null ? rootData.server.lastReportGenerationDate : null;
-    }
-
-    public Map<String, DailyNewPlayersData> getServerNewPlayersToday() {
-        return rootData.server != null ? rootData.server.newPlayersToday : new ConcurrentHashMap<>();
-    }
-
-    public int getServerNewPlayersCountForDate(String date) {
-        DailyNewPlayersData data = rootData.server.newPlayersToday.get(date);
-        return data != null ? data.totalNewPlayersInDay : 0;
-    }
-
-    public Map<UUID, String> getServerNewPlayersListForDate(String date) {
-        DailyNewPlayersData data = rootData.server.newPlayersToday.get(date);
-        return data != null ? data.players : new ConcurrentHashMap<>();
-    }
-
-    public Map<String, Integer> getServerTotalLoginCountsInDay() {
-        return rootData.server != null ? rootData.server.totalLoginCountsInDay : new ConcurrentHashMap<>();
-    }
-
-    public int getServerTotalLoginCountForDate(String date) {
-        return rootData.server.totalLoginCountsInDay.getOrDefault(date, 0);
-    }
-
-    public Map<String, Long> getServerTotalPlayTimesInDay() {
-        return rootData.server != null ? rootData.server.totalPlayTimesInDay : new ConcurrentHashMap<>();
-    }
-
-    public Long getServerTotalPlayTimeForDate(String date) {
-        return rootData.server.totalPlayTimesInDay.getOrDefault(date, 0L);
+    public Map<String, Integer> getPlayerLoggedInServerLoginCounts(UUID uuid) {
+        PlayerData playerData = getPlayerData(uuid);
+        return playerData != null ? playerData.loggedInServerLoginCounts : new ConcurrentHashMap<>();
     }
 
     public long getServerRunningDays() {
@@ -422,10 +334,6 @@ public class DataFileLoader {
 
         public PlayerDataLoadException(String message, Throwable cause) {
             super(message, cause);
-        }
-
-        public PlayerDataLoadException(Throwable cause) {
-            super(cause);
         }
     }
 }

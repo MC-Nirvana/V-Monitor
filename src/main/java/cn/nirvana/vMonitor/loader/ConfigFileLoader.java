@@ -1,7 +1,7 @@
-// File: src/main/java/cn/nirvana/vMonitor/config/ConfigFileLoader.java
 package cn.nirvana.vMonitor.loader;
 
 import org.slf4j.Logger;
+
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -10,6 +10,7 @@ import org.yaml.snakeyaml.error.YAMLException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 
@@ -21,7 +22,6 @@ public class ConfigFileLoader {
     private final Logger logger;
     private final Path dataDirectory;
     private final String configFileName = "config.yml";
-    // 移除这一行: private final Set<String> ALLOWED_LANGUAGES = Set.of("zh_cn", "zh_tw", "en_us");
 
     private Map<String, Object> config;
     private Map<String, String> serverDisplayNames = new HashMap<>();
@@ -31,35 +31,27 @@ public class ConfigFileLoader {
         this.dataDirectory = dataDirectory;
     }
 
-    /**
-     * 加载配置文件。如果文件不存在或解析失败，则抛出 ConfigFileLoader.ConfigLoadException。
-     * @throws ConfigFileLoader.ConfigLoadException 如果配置文件加载或解析失败
-     */
     public void loadConfig() {
         Path configFilePath = dataDirectory.resolve(configFileName);
         try (InputStreamReader reader = new InputStreamReader(new FileInputStream(configFilePath.toFile()), StandardCharsets.UTF_8)) {
             Yaml yaml = new Yaml(new Constructor(new LoaderOptions()));
             this.config = yaml.load(reader);
             if (this.config == null) {
-                // 如果文件为空或内容无法解析为Map，Yaml.load可能返回null
                 throw new ConfigLoadException("Config file is empty or malformed: " + configFilePath.toAbsolutePath());
             }
             logger.info("Config file '{}' loaded.", configFileName);
-            loadServerDisplayNames(); // 配置文件加载成功后加载服务器别名
+            loadServerDisplayNames();
         } catch (IOException e) {
-            // 文件不存在或I/O错误
             throw new ConfigLoadException("Failed to read config file: " + configFilePath.toAbsolutePath(), e);
         } catch (YAMLException e) {
-            // YAML解析错误
             throw new ConfigLoadException("Failed to parse config file (YAML syntax error): " + configFilePath.toAbsolutePath(), e);
         } catch (Exception e) {
-            // 捕获其他任何未预期的运行时异常
             throw new ConfigLoadException("An unexpected error occurred while loading config file: " + configFilePath.toAbsolutePath(), e);
         }
     }
 
     private void loadServerDisplayNames() {
-        this.serverDisplayNames.clear(); // 清除旧的别名
+        this.serverDisplayNames.clear();
         @SuppressWarnings("unchecked")
         List<Map<String, String>> aliasesList = (List<Map<String, String>>) getNestedValue("server-aliases");
         if (aliasesList != null) {
@@ -135,14 +127,9 @@ public class ConfigFileLoader {
     }
 
     public String getLanguageKey() {
-        // 仅仅返回配置中的值，不进行有效性检查和回退
-        return getString("language.default", "zh_cn"); // 默认值作为备用，但实际有效性由 LanguageFileLoader 处理
+        return getString("language.default");
     }
 
-    /**
-     * 当配置文件加载或解析失败时抛出的异常。
-     * 定义为 ConfigFileLoader 的静态嵌套类。
-     */
     public static class ConfigLoadException extends RuntimeException {
         public ConfigLoadException(String message) {
             super(message);

@@ -1,6 +1,6 @@
 package cn.nirvana.vMonitor.listener;
 
-import cn.nirvana.vMonitor.loader.ConfigFileLoader; // 导入 ConfigFileLoader
+import cn.nirvana.vMonitor.loader.ConfigFileLoader;
 import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 import cn.nirvana.vMonitor.loader.DataFileLoader;
 import cn.nirvana.vMonitor.VMonitor;
@@ -16,35 +16,38 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.Component;
 
-import org.slf4j.Logger; // 导入 Logger
+import org.slf4j.Logger;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.Optional;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerActivityListener {
     private final ProxyServer proxyServer;
-    private final ConfigFileLoader configFileLoader; // 新增注入 ConfigFileLoader
+    private final ConfigFileLoader configFileLoader;
     private final LanguageFileLoader languageFileLoader;
     private final DataFileLoader dataFileLoader;
     private final MiniMessage miniMessage;
     private final VMonitor plugin;
-    private final Logger logger; // 新增注入 Logger
+    private final Logger logger;
+    private final Map<UUID, LocalDateTime> playerLoginTimes;
 
-    public PlayerActivityListener(ProxyServer proxyServer, ConfigFileLoader configFileLoader, LanguageFileLoader languageFileLoader, DataFileLoader dataFileLoader, MiniMessage miniMessage, VMonitor plugin, Logger logger) {
+    public PlayerActivityListener(ProxyServer proxyServer, ConfigFileLoader configFileLoader,
+                                  LanguageFileLoader languageFileLoader, DataFileLoader dataFileLoader,
+                                  MiniMessage miniMessage, VMonitor plugin, Logger logger) {
         this.proxyServer = proxyServer;
-        this.configFileLoader = configFileLoader; // 初始化 ConfigFileLoader
+        this.configFileLoader = configFileLoader;
         this.languageFileLoader = languageFileLoader;
         this.dataFileLoader = dataFileLoader;
         this.miniMessage = miniMessage;
         this.plugin = plugin;
         this.logger = logger;
-
-        proxyServer.getScheduler().buildTask(plugin, () -> {
-            for (Player player : proxyServer.getAllPlayers()) {
-                dataFileLoader.updatePlayerPlayTime(player.getUniqueId());
-            }
-        }).repeat(1, TimeUnit.MINUTES).schedule();
+        this.playerLoginTimes = new ConcurrentHashMap<>();
     }
 
     @Subscribe
@@ -52,29 +55,25 @@ public class PlayerActivityListener {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         String playerName = player.getUsername();
-        // String ipAddress = player.getRemoteAddress().getAddress().getHostAddress(); // 移除 ipAddress 获取
-        boolean hasJoinedBefore = dataFileLoader.getPlayerName(uuid) != null;
-        dataFileLoader.updatePlayerOnLogin(uuid, playerName); // 移除 ipAddress 参数
-        if (!hasJoinedBefore) {
-            sendPlayerActivityMessage("player_activity.first_join", playerName, null, null, true); // 新增 enableCheck 参数
-        } else {
-            sendPlayerActivityMessage("player_activity.join", playerName, null, null, true); // 新增 enableCheck 参数
+        playerLoginTimes.put(uuid, LocalDateTime.now());
+        dataFileLoader.updatePlayerOnLogin(uuid, playerName);
+        if (dataFileLoader.getPlayerData(uuid) != null && dataFileLoader.getPlayerData(uuid).totalLoginCount == 1) {
+            sendPlayerActivityMessage(playerName, "player_activity.first_join_message", null, null);
         }
     }
-
 
     @Subscribe
     public void onServerConnected(ServerConnectedEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         String playerName = player.getUsername();
-        Optional<RegisteredServer> previousServer = event.getPreviousServer();
+        RegisteredServer previousServer = event.getPreviousServer().orElse(null);
         RegisteredServer currentServer = event.getServer();
-        // dataFileLoader.setPlayerCurrentServer(uuid, currentServer.getServerInfo().getName()); // 移除此行，因为 DataFileLoader 中没有此方法
-        if (previousServer.isPresent()) {
-            String fromServerName = previousServer.get().getServerInfo().getName();
-            String toServerName = currentServer.getServerInfo().getName();
-            sendPlayerActivityMessage("player_activity.switch", playerName, fromServerName, toServerName, true); // 新增 enableCheck 参数
+        dataFileLoader.updatePlayerServerLogin(uuid, currentServer.getServerInfo().getName());
+        if (previousServer != null) {
+            String fromServerName = configFileLoader.getServerDisplayName(previousServer.getServerInfo().getName());
+            String toServerName = configFileLoader.getServerDisplayName(currentServer.getServerInfo().getName());
+            sendPlayerActivityMessage(playerName, "player_activity.switch_message", fromServerName, toServerName);
         }
     }
 
@@ -83,29 +82,20 @@ public class PlayerActivityListener {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         String playerName = player.getUsername();
-        dataFileLoader.updatePlayerOnLogout(uuid, playerName);
-        sendPlayerActivityMessage("player_activity.quit", playerName, null, null, true); // 新增 enableCheck 参数
+        LocalDateTime loginTime = playerLoginTimes.remove(uuid);
+        Duration sessionDuration = Duration.ZERO;
+        if (loginTime != null) {
+            sessionDuration = Duration.between(loginTime, LocalDateTime.now());
+        }
+        Optional<RegisteredServer> currentServer = player.getCurrentServer().map(serverConnection -> serverConnection.getServer());
+        RegisteredServer disconnectedFromServer = currentServer.orElse(null);
+        dataFileLoader.updatePlayerOnQuit(uuid, playerName, disconnectedFromServer, sessionDuration);
+        String serverName = disconnectedFromServer != null ? configFileLoader.getServerDisplayName(disconnectedFromServer.getServerInfo().getName()) : null;
+        sendPlayerActivityMessage(playerName, "player_activity.quit_message", serverName, null);
     }
 
-    private void sendPlayerActivityMessage(String messageKey, String playerName, String fromServer, String toServer, boolean enableCheck) {
-        proxyServer.getScheduler().buildTask(plugin, () -> {
-            // 根据 messageKey 检查配置文件中的对应设置
-            if (enableCheck) { // 只有当 enableCheck 为 true 时才进行配置检查
-                if ("player_activity.join".equals(messageKey) && !configFileLoader.getBoolean("player_activity.enable_login_message", true)) {
-                    return; // 如果禁用登录消息，则不发送
-                }
-                if ("player_activity.first_join".equals(messageKey) && !configFileLoader.getBoolean("player_activity.enable_first_join_message", true)) {
-                    return; // 如果禁用首次加入消息，则不发送
-                }
-                if ("player_activity.quit".equals(messageKey) && !configFileLoader.getBoolean("player_activity.enable_quit_message", true)) {
-                    return; // 如果禁用退出消息，则不发送
-                }
-                if ("player_activity.switch".equals(messageKey) && !configFileLoader.getBoolean("player_activity.enable_switch_message", true)) {
-                    return; // 如果禁用切换消息，则不发送
-                }
-            }
-
-
+    private void sendPlayerActivityMessage(String playerName, String messageKey, String fromServer, String toServer) {
+        plugin.getProxyServer().getScheduler().buildTask(plugin, () -> {
             String message = languageFileLoader.getMessage(messageKey);
             if (message != null && !message.isEmpty() && !message.startsWith("<red>Missing Language Key:")) {
                 String formattedMessage = message.replace("{player}", playerName);
