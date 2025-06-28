@@ -1,7 +1,7 @@
 // File: src/main/java/cn/nirvana/vMonitor/loader/DataFileLoader.java
 package cn.nirvana.vMonitor.loader;
 
-import cn.nirvana.vMonitor.util.TimeUtil; // 确保导入 TimeUtil
+import cn.nirvana.vMonitor.util.TimeUtil;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -15,14 +15,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files; // 导入 Files
+import java.nio.file.Files; // 仍然需要 Files 来检查文件是否存在以便于加载
 import java.nio.file.Path;
 
-import java.time.Duration; // 重新导入 Duration
-// 移除了不必要的 java.time.LocalDate, java.time.LocalDateTime, java.time.format.DateTimeFormatter
-// 因为现在都通过 TimeUtil 处理
+import java.time.Duration;
 
-import java.util.Locale; // 仍然需要 Locale 用于某些特定情况，但这里不再直接使用 DateTimeFormatter
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,14 +27,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DataFileLoader {
     private final Logger logger;
     private final Path dataDirectory;
-    private final String playerDataFileName = "data.json"; // 重新添加此行
-    private final Path playerDataFilePath; // 存储完整的文件路径
+    private final String playerDataFileName = "data.json";
+    private final Path playerDataFilePath;
 
     private RootData rootData;
 
     private final Gson gson = new GsonBuilder()
             .setPrettyPrinting()
-            .registerTypeAdapter(Long.class, new TimeUtil()) // 确保 TimeUtil 能够处理 Long 类型
+            .registerTypeAdapter(Long.class, new TimeUtil())
             .create();
 
     public static class RootData {
@@ -56,17 +53,17 @@ public class DataFileLoader {
         public Map<String, DailyNewPlayersData> newPlayersToday;
         public Map<String, Integer> totalLoginCountsInDay;
         public Map<String, Long> totalPlayTimesInDay;
-        public Map<String, Integer> totalServerLoginCounts; // 新增：服务器总登录次数
-        public Map<String, Map<String, Integer>> dailyServerLoginCounts; // 新增：每日服务器登录次数
+        public Map<String, Integer> totalServerLoginCounts;
+        public Map<String, Map<String, Integer>> dailyServerLoginCounts;
 
         public ServerData() {
-            this.bootTime = ""; // 初始化为空字符串，将在 VMonitor 中设置
-            this.lastReportGenerationDate = TimeUtil.getCurrentDateString(); // 使用 TimeUtil
+            this.bootTime = "";
+            this.lastReportGenerationDate = TimeUtil.getCurrentDateString();
             this.newPlayersToday = new ConcurrentHashMap<>();
             this.totalLoginCountsInDay = new ConcurrentHashMap<>();
             this.totalPlayTimesInDay = new ConcurrentHashMap<>();
-            this.totalServerLoginCounts = new ConcurrentHashMap<>(); // 初始化
-            this.dailyServerLoginCounts = new ConcurrentHashMap<>(); // 初始化
+            this.totalServerLoginCounts = new ConcurrentHashMap<>();
+            this.dailyServerLoginCounts = new ConcurrentHashMap<>();
         }
     }
 
@@ -89,7 +86,7 @@ public class DataFileLoader {
         public int totalLoginCount;
         public Map<String, DailyLoginData> dailyLogins;
         public Map<String, WeeklyLoginData> weeklyLogins;
-        public Map<String, Integer> loggedInServerLoginCounts; // 新增：玩家登录到各个服务器的次数
+        public Map<String, Integer> loggedInServerLoginCounts;
 
         public PlayerData(String playerName, String firstJoinTime) {
             this.playerName = playerName;
@@ -100,14 +97,14 @@ public class DataFileLoader {
             this.totalLoginCount = 0;
             this.dailyLogins = new ConcurrentHashMap<>();
             this.weeklyLogins = new ConcurrentHashMap<>();
-            this.loggedInServerLoginCounts = new ConcurrentHashMap<>(); // 初始化
+            this.loggedInServerLoginCounts = new ConcurrentHashMap<>();
         }
     }
 
     public static class DailyLoginData {
         public int loginCount;
         public Long totalPlayTimeInDay;
-        public String lastLoginTime; // 包含秒数
+        public String lastLoginTime;
 
         public DailyLoginData() {
             this.loginCount = 0;
@@ -130,7 +127,7 @@ public class DataFileLoader {
         this.logger = logger;
         this.dataDirectory = dataDirectory;
         this.playerDataFilePath = dataDirectory.resolve(playerDataFileName);
-        this.rootData = new RootData(); // 初始化 rootData
+        this.rootData = new RootData();
     }
 
     public RootData getRootData() {
@@ -142,16 +139,15 @@ public class DataFileLoader {
     }
 
     /**
-     * 加载玩家数据。
-     * @throws PlayerDataLoadException 如果加载失败
+     * 加载玩家数据。现在假设文件已经存在（可能由 VMonitor 复制了默认文件）。
+     *
+     * @throws PlayerDataLoadException 如果加载失败或文件不存在
      */
     public void loadPlayerData() throws PlayerDataLoadException {
         if (!Files.exists(playerDataFilePath)) {
-            logger.debug("Player data file '{}' not found. Creating a new one.", playerDataFileName); // 降级为调试日志
-            // 如果文件不存在，直接初始化新的 RootData 并保存
-            this.rootData = new RootData();
-            savePlayerData(); // 保存新创建的空数据
-            return;
+            // 如果文件不存在，这是意外情况，因为 VMonitor 应该已经复制了默认文件
+            logger.error("Player data file '{}' does not exist after initial copy. This is a critical error.", playerDataFileName);
+            throw new PlayerDataLoadException("Player data file not found after initialization.");
         }
 
         try (InputStreamReader reader = new InputStreamReader(new FileInputStream(playerDataFilePath.toFile()), StandardCharsets.UTF_8)) {
@@ -159,8 +155,10 @@ public class DataFileLoader {
             RootData loadedData = gson.fromJson(reader, typeToken.getType());
 
             if (loadedData == null) {
-                logger.warn("Player data file '{}' is empty or malformed. Initializing new data.", playerDataFileName);
+                // 如果文件为空或解析为空，则视为新的空数据
+                logger.warn("Player data file '{}' is empty or malformed. Initializing new data in memory.", playerDataFileName);
                 this.rootData = new RootData();
+                // 此时不保存，因为 VMonitor 会在引导时间设置后统一保存
             } else {
                 this.rootData = loadedData;
                 // 确保新添加的字段在加载旧数据时被初始化
@@ -176,9 +174,8 @@ public class DataFileLoader {
                     }
                 });
             }
-            // logger.info("Player data loaded successfully."); // 将此日志移到 VMonitor
         } catch (IOException | JsonSyntaxException e) {
-            logger.error("Failed to load player data from '{}'. Initializing new data. Error: {}", playerDataFileName, e.getMessage());
+            logger.error("Failed to load player data from '{}'. Initializing new data in memory. Error: {}", playerDataFileName, e.getMessage());
             this.rootData = new RootData(); // 加载失败时初始化新数据
             throw new PlayerDataLoadException("Failed to load player data", e);
         }
@@ -190,7 +187,7 @@ public class DataFileLoader {
     public void savePlayerData() {
         try (FileWriter writer = new FileWriter(playerDataFilePath.toFile(), StandardCharsets.UTF_8)) {
             gson.toJson(rootData, writer);
-            logger.debug("Player data saved successfully."); // 调试级别日志，避免频繁输出
+            logger.debug("Player data saved successfully.");
         } catch (IOException e) {
             logger.error("Failed to save player data to '{}': {}", playerDataFileName, e.getMessage());
         }
@@ -202,41 +199,35 @@ public class DataFileLoader {
      * @param playerName 玩家名称
      */
     public void updatePlayerOnLogin(UUID uuid, String playerName) {
-        String currentDate = TimeUtil.getCurrentDateString(); // 使用 TimeUtil
-        String currentDateTimeSecond = TimeUtil.getCurrentDateTimeSecondString(); // 使用 TimeUtil
-        String currentWeek = TimeUtil.getCurrentWeekString(); // 使用 TimeUtil
+        String currentDate = TimeUtil.getCurrentDateString();
+        String currentDateTimeSecond = TimeUtil.getCurrentDateTimeSecondString();
+        String currentWeek = TimeUtil.getCurrentWeekString();
 
         PlayerData playerData = rootData.players.computeIfAbsent(uuid, k -> {
             logger.info("New player detected: {}. Initializing data.", playerName);
-            // 首次加入时间
             String firstJoinTime = currentDateTimeSecond;
             PlayerData newPlayer = new PlayerData(playerName, firstJoinTime);
 
-            // 更新服务器每日新玩家统计
             DailyNewPlayersData dailyNewPlayers = rootData.server.newPlayersToday.computeIfAbsent(currentDate, d -> new DailyNewPlayersData());
             dailyNewPlayers.totalNewPlayersInDay++;
             dailyNewPlayers.players.put(uuid, playerName);
             return newPlayer;
         });
 
-        // 确保玩家名称是最新的
         playerData.playerName = playerName;
-        playerData.lastLoginTime = currentDateTimeSecond; // 更新上次登录时间
-        playerData.totalLoginCount++; // 总登录次数增加
+        playerData.lastLoginTime = currentDateTimeSecond;
+        playerData.totalLoginCount++;
 
-        // 更新每日登录数据
         DailyLoginData dailyLogin = playerData.dailyLogins.computeIfAbsent(currentDate, d -> new DailyLoginData());
         dailyLogin.loginCount++;
-        dailyLogin.lastLoginTime = currentDateTimeSecond; // 每日登录的上次登录时间
+        dailyLogin.lastLoginTime = currentDateTimeSecond;
 
-        // 更新每周登录数据
         WeeklyLoginData weeklyLogin = playerData.weeklyLogins.computeIfAbsent(currentWeek, w -> new WeeklyLoginData());
         weeklyLogin.loginCount++;
 
-        // 更新服务器总登录次数（每日）
         rootData.server.totalLoginCountsInDay.merge(currentDate, 1, Integer::sum);
 
-        savePlayerData(); // 立即保存数据
+        savePlayerData();
     }
 
     /**
@@ -253,39 +244,34 @@ public class DataFileLoader {
             return;
         }
 
-        String currentDateTimeSecond = TimeUtil.getCurrentDateTimeSecondString(); // 使用 TimeUtil
-        String currentDate = TimeUtil.getCurrentDateString(); // 使用 TimeUtil
-        String currentWeek = TimeUtil.getCurrentWeekString(); // 使用 TimeUtil
+        String currentDateTimeSecond = TimeUtil.getCurrentDateTimeSecondString();
+        String currentDate = TimeUtil.getCurrentDateString();
+        String currentWeek = TimeUtil.getCurrentWeekString();
 
-        playerData.lastQuitTime = currentDateTimeSecond; // 更新上次退出时间
-        playerData.totalPlayTime += sessionDuration.getSeconds(); // 增加总游玩时间
+        playerData.lastQuitTime = currentDateTimeSecond;
+        playerData.totalPlayTime += sessionDuration.getSeconds();
 
-        // 更新每日游玩时间
         DailyLoginData dailyLogin = playerData.dailyLogins.get(currentDate);
         if (dailyLogin != null) {
             dailyLogin.totalPlayTimeInDay += sessionDuration.getSeconds();
         } else {
-            // 如果玩家在同一天登录但没有 DailyLoginData（例如，数据损坏或插件重启），则创建
             dailyLogin = new DailyLoginData();
             dailyLogin.totalPlayTimeInDay = sessionDuration.getSeconds();
             playerData.dailyLogins.put(currentDate, dailyLogin);
         }
 
-        // 更新每周游玩时间
         WeeklyLoginData weeklyLogin = playerData.weeklyLogins.get(currentWeek);
         if (weeklyLogin != null) {
             weeklyLogin.totalPlayTimeInWeek += sessionDuration.getSeconds();
         } else {
-            // 如果玩家在同一周登录但没有 WeeklyLoginData
             weeklyLogin = new WeeklyLoginData();
             weeklyLogin.totalPlayTimeInWeek = sessionDuration.getSeconds();
             playerData.weeklyLogins.put(currentWeek, weeklyLogin);
         }
 
-        // 更新服务器总游玩时间（每日）
         rootData.server.totalPlayTimesInDay.merge(currentDate, sessionDuration.getSeconds(), Long::sum);
 
-        savePlayerData(); // 立即保存数据
+        savePlayerData();
     }
 
     /**
@@ -300,23 +286,23 @@ public class DataFileLoader {
             return;
         }
 
-        String currentDate = TimeUtil.getCurrentDateString(); // 使用 TimeUtil
+        String currentDate = TimeUtil.getCurrentDateString();
 
-        // 更新玩家自身的服务器登录计数
         playerData.loggedInServerLoginCounts.merge(serverName, 1, Integer::sum);
 
-        // 更新服务器的总登录计数
         rootData.server.totalServerLoginCounts.merge(serverName, 1, Integer::sum);
 
-        // 更新服务器的每日登录计数
         Map<String, Integer> dailyServerLogins = rootData.server.dailyServerLoginCounts.computeIfAbsent(currentDate, k -> new ConcurrentHashMap<>());
         dailyServerLogins.merge(serverName, 1, Integer::sum);
 
-        savePlayerData(); // 立即保存数据
+        savePlayerData();
     }
 
-
     public static class PlayerDataLoadException extends Exception {
+        public PlayerDataLoadException(String message) {
+            super(message);
+        }
+
         public PlayerDataLoadException(String message, Throwable cause) {
             super(message, cause);
         }
