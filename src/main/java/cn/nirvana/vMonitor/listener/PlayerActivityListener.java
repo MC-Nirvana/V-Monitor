@@ -58,7 +58,7 @@ public class PlayerActivityListener {
         playerLoginTimes.put(uuid, LocalDateTime.now());
         dataFileLoader.updatePlayerOnLogin(uuid, playerName);
         if (dataFileLoader.getPlayerData(uuid) != null && dataFileLoader.getPlayerData(uuid).totalLoginCount == 1) {
-            sendPlayerActivityMessage(playerName, "player_activity.first_join_message", null, null);
+            sendPlayerActivityMessage(playerName, "player_activity.first_join", null, null);
         }
     }
 
@@ -73,7 +73,7 @@ public class PlayerActivityListener {
         if (previousServer != null) {
             String fromServerName = configFileLoader.getServerDisplayName(previousServer.getServerInfo().getName());
             String toServerName = configFileLoader.getServerDisplayName(currentServer.getServerInfo().getName());
-            sendPlayerActivityMessage(playerName, "player_activity.switch_message", fromServerName, toServerName);
+            sendPlayerActivityMessage(playerName, "player_activity.switch", fromServerName, toServerName);
         }
     }
 
@@ -91,7 +91,7 @@ public class PlayerActivityListener {
         RegisteredServer disconnectedFromServer = currentServer.orElse(null);
         dataFileLoader.updatePlayerOnQuit(uuid, playerName, disconnectedFromServer, sessionDuration);
         String serverName = disconnectedFromServer != null ? configFileLoader.getServerDisplayName(disconnectedFromServer.getServerInfo().getName()) : null;
-        sendPlayerActivityMessage(playerName, "player_activity.quit_message", serverName, null);
+        sendPlayerActivityMessage(playerName, "player_activity.quit", serverName, null);
     }
 
     private void sendPlayerActivityMessage(String playerName, String messageKey, String fromServer, String toServer) {
