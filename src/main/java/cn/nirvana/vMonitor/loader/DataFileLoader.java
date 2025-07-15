@@ -1,4 +1,3 @@
-// File: src/main/java/cn/nirvana/vMonitor/loader/DataFileLoader.java
 package cn.nirvana.vMonitor.loader;
 
 import cn.nirvana.vMonitor.util.TimeUtil;
@@ -15,7 +14,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files; // 仍然需要 Files 来检查文件是否存在以便于加载
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.time.Duration;
@@ -138,30 +137,19 @@ public class DataFileLoader {
         return rootData.players.get(uuid);
     }
 
-    /**
-     * 加载玩家数据。现在假设文件已经存在（可能由 VMonitor 复制了默认文件）。
-     *
-     * @throws PlayerDataLoadException 如果加载失败或文件不存在
-     */
     public void loadPlayerData() throws PlayerDataLoadException {
         if (!Files.exists(playerDataFilePath)) {
-            // 如果文件不存在，这是意外情况，因为 VMonitor 应该已经复制了默认文件
             logger.error("Player data file '{}' does not exist after initial copy. This is a critical error.", playerDataFileName);
             throw new PlayerDataLoadException("Player data file not found after initialization.");
         }
-
         try (InputStreamReader reader = new InputStreamReader(new FileInputStream(playerDataFilePath.toFile()), StandardCharsets.UTF_8)) {
             TypeToken<RootData> typeToken = new TypeToken<RootData>() {};
             RootData loadedData = gson.fromJson(reader, typeToken.getType());
-
             if (loadedData == null) {
-                // 如果文件为空或解析为空，则视为新的空数据
                 logger.warn("Player data file '{}' is empty or malformed. Initializing new data in memory.", playerDataFileName);
                 this.rootData = new RootData();
-                // 此时不保存，因为 VMonitor 会在引导时间设置后统一保存
             } else {
                 this.rootData = loadedData;
-                // 确保新添加的字段在加载旧数据时被初始化
                 if (this.rootData.server.totalServerLoginCounts == null) {
                     this.rootData.server.totalServerLoginCounts = new ConcurrentHashMap<>();
                 }
@@ -181,9 +169,6 @@ public class DataFileLoader {
         }
     }
 
-    /**
-     * 保存玩家数据。
-     */
     public void savePlayerData() {
         try (FileWriter writer = new FileWriter(playerDataFilePath.toFile(), StandardCharsets.UTF_8)) {
             gson.toJson(rootData, writer);
@@ -193,64 +178,42 @@ public class DataFileLoader {
         }
     }
 
-    /**
-     * 处理玩家登录事件。
-     * @param uuid 玩家UUID
-     * @param playerName 玩家名称
-     */
     public void updatePlayerOnLogin(UUID uuid, String playerName) {
         String currentDate = TimeUtil.getCurrentDateString();
         String currentDateTimeSecond = TimeUtil.getCurrentDateTimeSecondString();
         String currentWeek = TimeUtil.getCurrentWeekString();
-
         PlayerData playerData = rootData.players.computeIfAbsent(uuid, k -> {
             logger.info("New player detected: {}. Initializing data.", playerName);
             String firstJoinTime = currentDateTimeSecond;
             PlayerData newPlayer = new PlayerData(playerName, firstJoinTime);
-
             DailyNewPlayersData dailyNewPlayers = rootData.server.newPlayersToday.computeIfAbsent(currentDate, d -> new DailyNewPlayersData());
             dailyNewPlayers.totalNewPlayersInDay++;
             dailyNewPlayers.players.put(uuid, playerName);
             return newPlayer;
         });
-
         playerData.playerName = playerName;
         playerData.lastLoginTime = currentDateTimeSecond;
         playerData.totalLoginCount++;
-
         DailyLoginData dailyLogin = playerData.dailyLogins.computeIfAbsent(currentDate, d -> new DailyLoginData());
         dailyLogin.loginCount++;
         dailyLogin.lastLoginTime = currentDateTimeSecond;
-
         WeeklyLoginData weeklyLogin = playerData.weeklyLogins.computeIfAbsent(currentWeek, w -> new WeeklyLoginData());
         weeklyLogin.loginCount++;
-
         rootData.server.totalLoginCountsInDay.merge(currentDate, 1, Integer::sum);
-
         savePlayerData();
     }
 
-    /**
-     * 处理玩家退出事件。
-     * @param uuid 玩家UUID
-     * @param playerName 玩家名称
-     * @param disconnectedFromServer 玩家断开连接时所在的服务器
-     * @param sessionDuration 本次会话时长
-     */
     public void updatePlayerOnQuit(UUID uuid, String playerName, com.velocitypowered.api.proxy.server.RegisteredServer disconnectedFromServer, Duration sessionDuration) {
         PlayerData playerData = rootData.players.get(uuid);
         if (playerData == null) {
             logger.warn("Attempted to update data for unknown player: {}({}).", playerName, uuid);
             return;
         }
-
         String currentDateTimeSecond = TimeUtil.getCurrentDateTimeSecondString();
         String currentDate = TimeUtil.getCurrentDateString();
         String currentWeek = TimeUtil.getCurrentWeekString();
-
         playerData.lastQuitTime = currentDateTimeSecond;
         playerData.totalPlayTime += sessionDuration.getSeconds();
-
         DailyLoginData dailyLogin = playerData.dailyLogins.get(currentDate);
         if (dailyLogin != null) {
             dailyLogin.totalPlayTimeInDay += sessionDuration.getSeconds();
@@ -259,7 +222,6 @@ public class DataFileLoader {
             dailyLogin.totalPlayTimeInDay = sessionDuration.getSeconds();
             playerData.dailyLogins.put(currentDate, dailyLogin);
         }
-
         WeeklyLoginData weeklyLogin = playerData.weeklyLogins.get(currentWeek);
         if (weeklyLogin != null) {
             weeklyLogin.totalPlayTimeInWeek += sessionDuration.getSeconds();
@@ -268,33 +230,21 @@ public class DataFileLoader {
             weeklyLogin.totalPlayTimeInWeek = sessionDuration.getSeconds();
             playerData.weeklyLogins.put(currentWeek, weeklyLogin);
         }
-
         rootData.server.totalPlayTimesInDay.merge(currentDate, sessionDuration.getSeconds(), Long::sum);
-
         savePlayerData();
     }
 
-    /**
-     * 处理玩家连接到特定服务器的事件。
-     * @param uuid 玩家UUID
-     * @param serverName 服务器名称
-     */
     public void updatePlayerServerLogin(UUID uuid, String serverName) {
         PlayerData playerData = rootData.players.get(uuid);
         if (playerData == null) {
             logger.warn("Attempted to update server login for unknown player: {}.", uuid);
             return;
         }
-
         String currentDate = TimeUtil.getCurrentDateString();
-
         playerData.loggedInServerLoginCounts.merge(serverName, 1, Integer::sum);
-
         rootData.server.totalServerLoginCounts.merge(serverName, 1, Integer::sum);
-
         Map<String, Integer> dailyServerLogins = rootData.server.dailyServerLoginCounts.computeIfAbsent(currentDate, k -> new ConcurrentHashMap<>());
         dailyServerLogins.merge(serverName, 1, Integer::sum);
-
         savePlayerData();
     }
 
