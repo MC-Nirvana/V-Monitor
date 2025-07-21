@@ -1,30 +1,35 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.loader.ConfigFileLoader;
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.module.ReloadModule;
+import cn.nirvana.vMonitor.util.CommandUtil;
+
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import com.velocitypowered.api.command.CommandSource;
 
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
 public class ReloadCommand {
-    private final ConfigFileLoader configFileLoader;
-    private final LanguageFileLoader languageFileLoader;
-    private final MiniMessage miniMessage;
+    private final CommandUtil commandUtil;
+    private final ReloadModule reloadModule;
 
-    public ReloadCommand(ConfigFileLoader configFileLoader, LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
-        this.configFileLoader = configFileLoader;
-        this.languageFileLoader = languageFileLoader;
-        this.miniMessage = miniMessage;
+    public ReloadCommand(CommandUtil commandUtil, ReloadModule reloadModule) {
+        this.commandUtil = commandUtil;
+        this.reloadModule = reloadModule;
+        registerReloadCommand();
     }
 
-    public void execute(CommandSource source) {
-        if (configFileLoader != null) {
-            configFileLoader.loadConfig();
-        } else {
-            source.sendMessage(miniMessage.deserialize("<red>Configuration loader not available for reload.</red>"));
-        }
-        languageFileLoader.loadLanguage();
-        source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("global.reload_success")));
+    private void registerReloadCommand() {
+        commandUtil.registerSubCommand(rootNode -> {
+            LiteralCommandNode<CommandSource> reloadNode = LiteralArgumentBuilder.<CommandSource>literal("reload")
+                    .requires(source -> source.hasPermission("vmonitor.reload"))
+                    .executes(context -> {
+                        reloadModule.executeReload(context.getSource()); // 委托给 ReloadModule 处理执行逻辑
+                        return SINGLE_SUCCESS;
+                    })
+                    .build();
+            rootNode.addChild(reloadNode);
+        });
     }
 }

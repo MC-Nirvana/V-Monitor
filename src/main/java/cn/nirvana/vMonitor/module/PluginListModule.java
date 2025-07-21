@@ -1,61 +1,50 @@
-package cn.nirvana.vMonitor.command;
+package cn.nirvana.vMonitor.module;
 
 import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 
-import com.mojang.brigadier.tree.LiteralCommandNode;
-
-import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.plugin.PluginContainer;
-import com.velocitypowered.api.plugin.PluginDescription;
+import com.velocitypowered.api.plugin.PluginDescription; // 确保导入
 import com.velocitypowered.api.proxy.ProxyServer;
+import com.velocitypowered.api.plugin.PluginManager; // 导入 PluginManager
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
-
-public class PluginListCommand {
+public class PluginListModule {
     private final ProxyServer proxyServer;
     private final LanguageFileLoader languageFileLoader;
     private final MiniMessage miniMessage;
-    private final CommandRegistrar commandRegistrar;
 
-    public PluginListCommand(ProxyServer proxyServer, LanguageFileLoader languageFileLoader,
-                             MiniMessage miniMessage, CommandRegistrar commandRegistrar) {
+    public PluginListModule(ProxyServer proxyServer, LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
         this.proxyServer = proxyServer;
         this.languageFileLoader = languageFileLoader;
         this.miniMessage = miniMessage;
-        this.commandRegistrar = commandRegistrar;
-        registerPluginListCommand();
     }
 
-    private void registerPluginListCommand() {
-        LiteralCommandNode<CommandSource> listNode = BrigadierCommand.literalArgumentBuilder("list")
-                .requires(source -> source.hasPermission("vmonitor.plugin"))
-                .executes(context -> {
-                    execute(context.getSource());
-                    return SINGLE_SUCCESS;
-                })
-                .build();
-        commandRegistrar.registerPluginSubCommand(pluginNode -> {
-            pluginNode.addChild(listNode);
-        });
-    }
+    public void executePluginList(CommandSource source) {
+        // 解决 'ProxyServer' 中无法解析 'getAllPlugins' 的问题
+        List<PluginContainer> plugins = proxyServer.getPluginManager().getPlugins().stream() // 使用 getPluginManager().getPlugins()
+                .sorted(Comparator.comparing(p -> p.getDescription().getName().orElse(p.getDescription().getId()))) // 'T' 中的 getDescription 应该不再有问题
+                .collect(Collectors.toList());
 
-    public void execute(CommandSource source) {
-        List<PluginContainer> plugins = new ArrayList<>(proxyServer.getPluginManager().getPlugins());
-        plugins.sort(Comparator.comparing(p -> p.getDescription().getName().orElse(p.getDescription().getId())));
-        String pluginListFormat = languageFileLoader.getMessage("commands.plugin.list.format");
-        String pluginLineFormat = languageFileLoader.getMessage("commands.plugin.list.plugin_line");
-        String pluginListHoverFormat = languageFileLoader.getMessage("commands.plugin.list.hover_format");
+        if (plugins.isEmpty()) {
+            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.plugin.no_plugins")));
+            return;
+        }
+
         StringBuilder pluginEntries = new StringBuilder();
+        // 获取语言文件中的格式字符串
+        String pluginListFormat = languageFileLoader.getMessage("commands.plugin.list.format");
+        String pluginLineFormat = languageFileLoader.getMessage("commands.plugin.list.line_format");
+        String pluginListHoverFormat = languageFileLoader.getMessage("commands.plugin.list.hover_format");
+
         for (PluginContainer plugin : plugins) {
             PluginDescription description = plugin.getDescription();
             String id = description.getId();

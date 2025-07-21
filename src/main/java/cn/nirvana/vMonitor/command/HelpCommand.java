@@ -1,26 +1,34 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.module.HelpModule;
+import cn.nirvana.vMonitor.util.CommandUtil;
+
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import com.velocitypowered.api.command.CommandSource;
 
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
 public class HelpCommand {
-    private final LanguageFileLoader languageFileLoader;
-    private final MiniMessage miniMessage;
+    private final CommandUtil commandUtil;
+    private final HelpModule helpModule;
 
-    public HelpCommand(LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
-        this.languageFileLoader = languageFileLoader;
-        this.miniMessage = miniMessage;
+    public HelpCommand(CommandUtil commandUtil, HelpModule helpModule) {
+        this.commandUtil = commandUtil;
+        this.helpModule = helpModule;
+        registerHelpCommand();
     }
 
-    public void execute(CommandSource source) {
-        String helpMessage = languageFileLoader.getMessage("commands.help.all_format");
-        if (helpMessage != null && !helpMessage.isEmpty() && !helpMessage.startsWith("<red>Missing Language Key:")) {
-            source.sendMessage(miniMessage.deserialize(helpMessage));
-        } else {
-            source.sendMessage(miniMessage.deserialize("<red>No help message configured or key 'help-format' is missing in the language file.</red>"));
-        }
+    private void registerHelpCommand() {
+        commandUtil.registerSubCommand(rootNode -> {
+            LiteralCommandNode<CommandSource> helpNode = LiteralArgumentBuilder.<CommandSource>literal("help")
+                    .executes(context -> {
+                        helpModule.executeHelp(context.getSource()); // 委托给 HelpModule 处理执行逻辑
+                        return SINGLE_SUCCESS;
+                    })
+                    .build();
+            rootNode.addChild(helpNode);
+        });
     }
 }
