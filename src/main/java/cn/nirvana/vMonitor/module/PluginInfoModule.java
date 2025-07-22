@@ -28,35 +28,50 @@ public class PluginInfoModule {
     }
 
     public void executePluginInfoAll(CommandSource source) {
-        // 解决 'ProxyServer' 中无法解析 'getAllPlugins' 的问题
-        List<PluginContainer> plugins = proxyServer.getPluginManager().getPlugins().stream() // 使用 getPluginManager().getPlugins()
+        List<PluginContainer> plugins = proxyServer.getPluginManager().getPlugins().stream()
                 .sorted(Comparator.comparing(p -> p.getDescription().getName().orElse(p.getDescription().getId())))
                 .collect(Collectors.toList());
 
         if (plugins.isEmpty()) {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.plugin.no_plugins")));
+            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.plugin.empty_list")));
             return;
         }
 
         StringBuilder pluginInfoList = new StringBuilder();
-        String pluginInfoFormat = languageFileLoader.getMessage("commands.plugin.info.all_plugin_format"); // 获取单条插件信息的格式
-        // 确保整体列表的格式也存在，例如 commands.plugin.info.all_format
+
+        // 获取插件信息格式字符串
+        String pluginInfoFormat = languageFileLoader.getMessage("commands.plugin.info.format");
+
+        // 获取 all_header
         String allPluginsHeader = languageFileLoader.getMessage("commands.plugin.info.all_header");
 
         for (PluginContainer plugin : plugins) {
-            PluginDescription description = plugin.getDescription(); // 'T' 中的 'getDescription' 应该不再有问题，因为 p 现在是 PluginContainer
+            PluginDescription description = plugin.getDescription();
+
             String id = description.getId();
             String name = description.getName().orElse(id);
-            String version = description.getVersion().orElse(languageFileLoader.getMessage("global.unknown_version"));
-            String entryLine = pluginInfoFormat
-                    .replace("{plugin_name}", name)
-                    .replace("{plugin_version}", version);
-            pluginInfoList.append(miniMessage.serialize(miniMessage.deserialize(entryLine))).append("\n");
+            String version = description.getVersion().orElse(languageFileLoader.getMessage("commands.plugin.info.no_version"));
+            String url = description.getUrl().orElse(languageFileLoader.getMessage("commands.plugin.info.no_url"));
+            String desc = description.getDescription().orElse(languageFileLoader.getMessage("commands.plugin.info.no_description"));
+            String authors = String.join(", ", description.getAuthors());
+            if (authors.isEmpty()) {
+                authors = languageFileLoader.getMessage("commands.plugin.info.no_authors");
+            }
+
+            String pluginEntry = pluginInfoFormat
+                    .replace("{id}", id)
+                    .replace("{name}", name)
+                    .replace("{version}", version)
+                    .replace("{url}", url)
+                    .replace("{description}", desc)
+                    .replace("{authors}", authors);
+
+            pluginInfoList.append(miniMessage.serialize(miniMessage.deserialize(pluginEntry))).append("\n");
         }
 
         String finalMessage = allPluginsHeader
-                .replace("{count}", String.valueOf(plugins.size()))
                 .replace("{plugin_list}", pluginInfoList.toString().trim());
+
         source.sendMessage(miniMessage.deserialize(finalMessage));
     }
 
@@ -67,12 +82,12 @@ public class PluginInfoModule {
             PluginDescription description = plugin.get().getDescription();
             String id = description.getId();
             String name = description.getName().orElse(id);
-            String version = description.getVersion().orElse(languageFileLoader.getMessage("global.unknown_version"));
-            String url = description.getUrl().orElse(languageFileLoader.getMessage("commands.plugin.no_url"));
-            String desc = description.getDescription().orElse(languageFileLoader.getMessage("commands.plugin.no_description"));
+            String version = description.getVersion().orElse(languageFileLoader.getMessage("commands.plugin.info.no_version"));
+            String url = description.getUrl().orElse(languageFileLoader.getMessage("commands.plugin.info.no_url"));
+            String desc = description.getDescription().orElse(languageFileLoader.getMessage("commands.plugin.info.no_description"));
             String authors = String.join(", ", description.getAuthors());
             if (authors.isEmpty()) {
-                authors = languageFileLoader.getMessage("commands.plugin.no_authors");
+                authors = languageFileLoader.getMessage("commands.plugin.info.no_authors");
             }
             String infoMessage = languageFileLoader.getMessage("commands.plugin.info.format")
                     .replace("{id}", id)

@@ -2,71 +2,87 @@
 
 # 全局消息
 global:
-  no_permission: "<red>您没有权限使用此命令。</red>"
-  reload_success: "<green>配置重载成功。</green>"
-  unknown_info: "<gray>未知</gray>"
-  unknown_version: "未知版本"
-  unknown_server: "未知服务器"
+  no_permission: "<red>您没有权限使用此命令</red>"
+  reload_success: "<green>配置重载成功</green>"
+  unknown_info: "<gray>未知内容</gray>"
 
 # 玩家活动消息
 player_activity:
-  first_join: "<bold><gold>{player}</gold></bold>首次加入服务器！欢迎！"
-  join: "<green>{player}</green>加入了服务器。"
-  quit: "<red>{player}</red>离开了服务器。"
-  switch: "<yellow>{player}</yellow>从 <blue>{from}</blue> 切换到了 <aqua>{to}</aqua>。"
+  first_join: "欢迎 <bold><gold>{player}</gold></bold> 首次加入到本服务器"
+  join: "<green>{player}</green>加入了服务器"
+  quit: "<red>{player}</red>离开了服务器"
+  switch: "<yellow>{player}</yellow>从 <blue>{from}</blue> 切换到了 <aqua>{to}</aqua>"
 
 # 命令相关消息
 commands:
   version:
     format: | 
       
-      <gold><bold>V-Monitor - 作者：MC-Nirvana</bold></gold>
+      <gold><bold>V-Monitor - V-监视器</bold></gold>
+      <aqua>作者</aqua> <white>-</white> <green>MC-Nirvana</green>
+      <aqua>版本</aqua> <white>-</white> <green>1.3.0</green>
       <aqua>/vm help</aqua> <white>-</white> <green>获取插件总帮助信息。</green>
 
   help:
     all_format: |
       
-      <gold><bold>V-Monitor - 帮助:</bold></gold>
-      <aqua>/vm help</aqua> <white>-</white> <green>获取插件总帮助信息。</green>
-      <aqua>/vm reload</aqua> <white>-</white> <green>重载插件配置。</green>
-      <aqua>/vm server list [all|服务器名称]</aqua> <white>-</white> <green>列出所有或指定服务器上的玩家。</green>
-      <aqua>/vm server info [all|服务器名称]</aqua> <white>-</white> <green>获取所有或指定服务器的详细信息。</green>
-      <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加载插件。</green>
-      <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>获取所有或指定插件的详细信息。</green>
+      <gold><bold>V-Monitor - 帮助</bold></gold>
+      <aqua>/vm help</aqua> <white>-</white> <green>获取插件总帮助信息</green>
+      <aqua>/vm reload</aqua> <white>-</white> <green>重载插件配置</green>
+      <aqua>/vm version</aqua> <white>-</white> <green>获取插件版本信息</green>
+      <aqua>/vm server list [all|服务器名称]</aqua> <white>-</white> <green>列出所有或指定服务器上的玩家</green>
+      <aqua>/vm server info [all|服务器名称]</aqua> <white>-</white> <green>获取所有或指定服务器的详细信息</green>
+      <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加载插件</green>
+      <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>获取所有或指定插件的详细信息</green>
 
     server_format: |
       
-      <gold><bold>V-Monitor - 帮助:</bold></gold>
-      <aqua>/vm server list [all|服务器名称]</aqua> <white>-</white> <green>列出所有或指定服务器上的玩家。</green>
-      <aqua>/vm server info [all|服务器名称]</aqua> <white>-</white> <green>获取所有或指定服务器的详细信息。</green>
+      <gold><bold>V-Monitor - 帮助</bold></gold>
+      <aqua>/vm server list [all|服务器名称]</aqua> <white>-</white> <green>列出所有或指定服务器上的玩家</green>
+      <aqua>/vm server info [all|服务器名称]</aqua> <white>-</white> <green>获取所有或指定服务器的详细信息</green>
 
     plugin_format: |
       
-      <gold><bold>V-Monitor - 帮助:</bold></gold>
-      <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加载插件。</green>
-      <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>获取所有或指定插件的详细信息。</green>
+      <gold><bold>V-Monitor - 帮助</bold></gold>
+      <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加载插件</green>
+      <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>获取所有或指定插件的详细信息</green>
 
   server:
-    not_found: "<red>服务器 {server} 不存在。</red>"
-    unreachable: "<red>无法连接到服务器 {server}。</red>"
+    not_found: "<red>服务器 {server} 不存在</red>"
+    unreachable: "<red>无法连接到服务器 {server}</red>"
+
     usage:
       list: "<gold>请使用: <white>/vm server list <all|server_name></white></gold>"
       info: "<gold>请使用: <white>/vm server info <all|server_name></white></gold>"
 
     list:
+      no_players: "<gray>此服务器暂无玩家在线</gray>"
+      no_servers: "<red>未找到任何服务器</red>"
       all_format: |
         
         <gold>--- <yellow>全服在线玩家列表</yellow> <gold>---
-        <gold>全服共计有</gold> <aqua>{online_players_count}</aqua> <gold>名玩家在线。</gold>
+        <gold>全服共计有</gold> <aqua>{online_players_count}</aqua> <gold>名玩家在线</gold>
         {all_players_list}
+
+      all_line_format: |        
+        服务器 <yellow>{server_display_name}</yellow> 的在线玩家列表 (<green>当前在线：{online_players}人</green>):
+        {players_list}
+
       specific_format: |
         
         <gold>--- <yellow>服务器 {server_display_name} 上的在线玩家列表</yellow> <gold>---
-        <gold>服务器</gold> <yellow>{server_display_name}</yellow> <gold>共计有</gold> <aqua>{online_players_number}</aqua> <gold>名玩家在线。</gold>
+        <gold>服务器</gold> <yellow>{server_display_name}</yellow> <gold>共计有</gold> <aqua>{online_players_number}</aqua> <gold>名玩家在线</gold>
         {specific_players_list}
-      no_players_online_info: "<gray>此服务器暂无玩家在线。</gray>"
 
     info:
+      status_offline: "<red>未运行</red>"
+      status_online: "<green>正在运行</green>"
+      no_players: "<gray>此服务器暂无玩家在线</gray>"
+      not_found: "<red>未找到服务器 {server}</red>"
+      no_servers: "<red>未找到任何服务器</red>"
+      no_version: "<red>未知版本</red>"
+      no_motd: "<gray>无MOTD</gray>"
+      server_status_list_format: "<gold>{server_name}</gold> <gray>[{server_display_name}]</gray>: {status}（当前在线玩家情况: {online_players}）"
       all_format: |
         
         <gold>--- <yellow>Velocity 实例概览</yellow> <gold>---
@@ -75,8 +91,8 @@ commands:
         <yellow>服务器数量:</yellow> <green>{server_count}</green>台
 
         <gold><bold>--- 服务器运行状态概览 ---</bold></gold>
-        <yellow>- 正在运行:</yellow> <green>{running_servers}</green>台
-        <yellow>- 未运行:</yellow> <red>{offline_servers}</red>台
+        <yellow>- 在线服务器:</yellow> <green>{online_servers}</green>台
+        <yellow>- 离线服务器:</yellow> <red>{offline_servers}</red>台
 
         <gold><bold>--- 各子服务器运行状态 ---</bold></gold>
         {server_status_list}
@@ -86,26 +102,24 @@ commands:
         <gold>--- <yellow>服务器 {server_name} 详细信息</yellow> <gold>---
         <gold>名称:</gold> <gray>{server_name}</gray>
         <gold>别名:</gold> <aqua>{server_display_name}</aqua>
-        <gold>版本:</gold> <gray>{version}</gray>
-        <gold>玩家:</gold> <aqua>{online_players}/{max_players}</aqua>
+        <gold>游戏版本:</gold> <gray>{version}</gray>
+        <gold>运行状态:</gold> <reset>{status}</reset>
+        <gold>在线玩家:</gold> <aqua>{online_players}</aqua>
         <gold>MOTD:</gold>
         <reset>{motd}</reset>
-      status_offline: "<red>未运行</red>"
-      status_online: "<green>正在运行</green>"
-      server_status_list_format: "<gold>{server_name}</gold> <gray>[{server_display_name}]</gray>: {status}（当前在线玩家情况: {online_players}）"
-      no_players_online_info: "<gray>此服务器暂无玩家在线。</gray>"
 
   plugin:
-    not_found: "插件 <red>{plugin}</red> 不存在。"
-    empty_list: "<red>未找到任何插件。</red>"
-    no_url: "<gray>未提供网址</gray>"
-    no_description: "<gray>未提供描述</gray>"
-    no_authors: "<gray>未列出作者</gray>"
+    not_found: "插件 <red>{plugin}</red> 不存在"
+    empty_list: "<red>未找到任何插件</red>"
+
     usage:
-      list: "<yellow>请使用: <gold>/vmonitor plugin <list|info> [插件ID]</gold>"
       info: "<yellow>请使用: <gold>/vmonitor plugin info <all|插件ID></gold>"
 
     list:
+      no_version: "<gray>未提供版本</gray>"
+      no_url: "<gray>未提供网址</gray>"
+      no_description: "<gray>未提供描述</gray>"
+      no_authors: "<gray>未列出作者</gray>"
       plugin_line: "<gold>插件名称：{plugin_name}</gold> <white>-</white> <gray>版本号：{plugin_version}</gray>"
       format: |
         
@@ -122,7 +136,15 @@ commands:
         <gold>作者:</gold> <gray>{authors}</gray>
 
     info:
-      all_header: "<gold>--- <yellow>所有插件信息</yellow> <gold>---"
+      no_version: "<gray>未提供版本</gray>"
+      no_url: "<gray>未提供网址</gray>"
+      no_description: "<gray>未提供描述</gray>"
+      no_authors: "<gray>未列出作者</gray>"
+      all_header: |
+        
+        <gold>--- <yellow>所有插件信息</yellow> <gold>---
+        {plugin_list}
+
       format: |
         
         <gold>--- <yellow>插件信息: {name}</yellow> <gold>---

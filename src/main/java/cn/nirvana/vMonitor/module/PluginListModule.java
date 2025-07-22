@@ -35,26 +35,26 @@ public class PluginListModule {
                 .collect(Collectors.toList());
 
         if (plugins.isEmpty()) {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.plugin.no_plugins")));
+            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.plugin.empty_list")));
             return;
         }
 
         StringBuilder pluginEntries = new StringBuilder();
         // 获取语言文件中的格式字符串
         String pluginListFormat = languageFileLoader.getMessage("commands.plugin.list.format");
-        String pluginLineFormat = languageFileLoader.getMessage("commands.plugin.list.line_format");
+        String pluginLineFormat = languageFileLoader.getMessage("commands.plugin.list.plugin_line");
         String pluginListHoverFormat = languageFileLoader.getMessage("commands.plugin.list.hover_format");
 
         for (PluginContainer plugin : plugins) {
             PluginDescription description = plugin.getDescription();
             String id = description.getId();
             String name = description.getName().orElse(id);
-            String version = description.getVersion().orElse(languageFileLoader.getMessage("global.unknown_version"));
-            String url = description.getUrl().orElse(languageFileLoader.getMessage("commands.plugin.no_url"));
-            String descriptionText = description.getDescription().orElse(languageFileLoader.getMessage("commands.plugin.no_description"));
+            String version = description.getVersion().orElse(languageFileLoader.getMessage("commands.plugin.list.no_veesion"));
+            String url = description.getUrl().orElse(languageFileLoader.getMessage("commands.plugin.list.no_url"));
+            String descriptionText = description.getDescription().orElse(languageFileLoader.getMessage("commands.plugin.list.no_description"));
             String authors = String.join(", ", description.getAuthors());
             if (authors.isEmpty()) {
-                authors = languageFileLoader.getMessage("commands.plugin.no_authors");
+                authors = languageFileLoader.getMessage("commands.plugin.list.no_authors");
             }
             String entryLine = pluginLineFormat
                     .replace("{plugin_name}", name)

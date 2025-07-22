@@ -21,14 +21,13 @@ public class HelpCommand {
     }
 
     private void registerHelpCommand() {
-        commandUtil.registerSubCommand(rootNode -> {
-            LiteralCommandNode<CommandSource> helpNode = LiteralArgumentBuilder.<CommandSource>literal("help")
+        commandUtil.registerSubCommand(root -> {
+            root.then(LiteralArgumentBuilder.<CommandSource>literal("help")
                     .executes(context -> {
-                        helpModule.executeHelp(context.getSource()); // 委托给 HelpModule 处理执行逻辑
+                        helpModule.executeHelp(context.getSource());
                         return SINGLE_SUCCESS;
                     })
-                    .build();
-            rootNode.addChild(helpNode);
+            );
         });
     }
 }

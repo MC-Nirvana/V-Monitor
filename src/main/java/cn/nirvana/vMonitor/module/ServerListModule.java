@@ -31,7 +31,7 @@ public class ServerListModule {
     public void executeListAll(CommandSource source) {
         Collection<RegisteredServer> servers = proxyServer.getAllServers();
         if (servers.isEmpty()) {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.no_servers")));
+            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.list.no_servers")));
             return;
         }
 
@@ -62,9 +62,8 @@ public class ServerListModule {
         }
 
         String allFormat = languageFileLoader.getMessage("commands.server.list.all_format")
-                .replace("{online_server_count}", String.valueOf(servers.size()))
-                .replace("{total_players}", String.valueOf(totalPlayers))
-                .replace("{server_list_content}", serverListContent.toString().trim());
+                .replace("{online_players_count}", String.valueOf(totalPlayers))
+                .replace("{all_players_list}", serverListContent.toString().trim());
 
         source.sendMessage(miniMessage.deserialize(allFormat));
     }

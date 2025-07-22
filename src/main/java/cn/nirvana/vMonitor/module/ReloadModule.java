@@ -19,12 +19,37 @@ public class ReloadModule {
     }
 
     public void executeReload(CommandSource source) {
+        boolean configReloaded = false;
+        boolean langReloaded = false;
+
         if (configFileLoader != null) {
-            configFileLoader.loadConfig();
+            try {
+                configFileLoader.reloadConfig(); // 调用新的 reloadConfig 方法
+                configReloaded = true;
+            } catch (Exception e) { // 捕获可能从 loadConfig 抛出的异常
+                source.sendMessage(miniMessage.deserialize("<red>Failed to reload config: " + e.getMessage() + "</red>"));
+            }
         } else {
             source.sendMessage(miniMessage.deserialize("<red>Configuration loader not available for reload.</red>"));
         }
-        languageFileLoader.loadLanguage();
-        source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("global.reload_success")));
+
+        if (languageFileLoader != null && configReloaded) { // 只有配置成功重载后才尝试重载语言文件，因为语言文件依赖配置
+            try {
+                languageFileLoader.reloadLanguage(); // 调用新的 reloadLanguage 方法
+                langReloaded = true;
+            } catch (Exception e) { // 捕获可能从 loadLanguage 抛出的异常
+                source.sendMessage(miniMessage.deserialize("<red>Failed to reload language: " + e.getMessage() + "</red>"));
+            }
+        } else if (!configReloaded) {
+            source.sendMessage(miniMessage.deserialize("<yellow>Skipping language reload due to config reload failure.</yellow>"));
+        } else {
+            source.sendMessage(miniMessage.deserialize("<red>Language loader not available for reload.</red>"));
+        }
+
+        if (configReloaded && langReloaded) {
+            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("global.reload_success")));
+        } else {
+            source.sendMessage(miniMessage.deserialize("<red>Reload completed with errors. Check console for details.</red>"));
+        }
     }
 }

@@ -27,14 +27,15 @@ V-Monitor 是一个轻量级的 Velocity 代理端插件（内部开发代号：
 ## 四、插件用法 (命令)
 插件的主命令是 `/vmonitor`，别名为 `/vm`。
 
-| 命令                            | 用法示例                                             | 权限节点          | 描述                             |
-|---------------------------------|------------------------------------------------------|-------------------|----------------------------------|
-| `help`                          | `/vm help`                                           | `none`            | 获取插件总帮助信息。             |
-| `reload`                        | `/vm reload`                                         | `vmonitor.reload` | 重载插件配置。                   |
-| `server list [all或服务器名称]` | `/vm server list all` 或 `/vm server list lobby`     | `none`            | 列出所有或指定服务器上的玩家。   |
-| `server info [all或服务器名称]` | `/vm server info all` 或 `/vm server info lobby`     | `none`            | 获取所有或指定服务器的详细信息。 |
-| `plugin list`                   | `/vm plugin list`                                    | `vmonitor.plugin` | 列出所有已加载插件。             |
-| `plugin info [all或插件ID]`     | `/vm plugin info all` 或 `/vm plugin info V-Monitor` | `vmonitor.plugin` | 获取所有或指定插件的详细信息。   |
+| 命令                            | 用法示例                                             | 权限节点           | 描述                             |
+|---------------------------------|------------------------------------------------------|--------------------|----------------------------------|
+| `help`                          | `/vm help`                                           | `none`             | 获取插件总帮助信息。             |
+| `reload`                        | `/vm reload`                                         | `vmonitor.reload`  | 重载插件配置。                   |
+| `version`                       | `/vm version`                                        | `vmonitor.version` | 获取插件版本信息。                |
+| `server list [all或服务器名称]` | `/vm server list all` 或 `/vm server list lobby`     | `none`             | 列出所有或指定服务器上的玩家。   |
+| `server info [all或服务器名称]` | `/vm server info all` 或 `/vm server info lobby`     | `none`             | 获取所有或指定服务器的详细信息。 |
+| `plugin list`                   | `/vm plugin list`                                    | `vmonitor.plugin`  | 列出所有已加载插件。             |
+| `plugin info [all或插件ID]`     | `/vm plugin info all` 或 `/vm plugin info V-Monitor` | `vmonitor.plugin`  | 获取所有或指定插件的详细信息。   |
 
 *默认情况下，拥有 OP 权限的玩家和控制台拥有所有权限节点。*
 

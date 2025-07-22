@@ -1,5 +1,3 @@
-// ServerCommand.java (更新后的代码)
-
 package cn.nirvana.vMonitor.command;
 
 import cn.nirvana.vMonitor.loader.ConfigFileLoader;
@@ -7,7 +5,7 @@ import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 import cn.nirvana.vMonitor.module.ServerInfoModule;
 import cn.nirvana.vMonitor.module.ServerListModule;
 import cn.nirvana.vMonitor.util.CommandUtil;
-import cn.nirvana.vMonitor.module.HelpModule; // 导入 HelpModule
+import cn.nirvana.vMonitor.module.HelpModule;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -19,12 +17,10 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.proxy.server.RegisteredServer; // 确保导入
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
@@ -36,13 +32,13 @@ public class ServerCommand {
     private final MiniMessage miniMessage;
     private final ServerListModule serverListModule;
     private final ServerInfoModule serverInfoModule;
-    private final ConfigFileLoader configFileLoader; // 需要ConfigFileLoader来获取服务器显示名称
-    private final HelpModule helpModule; // 注入 HelpModule
+    private final ConfigFileLoader configFileLoader;
+    private final HelpModule helpModule;
 
     public ServerCommand(CommandUtil commandUtil, ProxyServer proxyServer,
                          LanguageFileLoader languageFileLoader, MiniMessage miniMessage,
                          ServerListModule serverListModule, ServerInfoModule serverInfoModule,
-                         ConfigFileLoader configFileLoader, HelpModule helpModule) { // 接收 HelpModule 实例
+                         ConfigFileLoader configFileLoader, HelpModule helpModule) {
         this.commandUtil = commandUtil;
         this.proxyServer = proxyServer;
         this.languageFileLoader = languageFileLoader;
@@ -50,63 +46,63 @@ public class ServerCommand {
         this.serverListModule = serverListModule;
         this.serverInfoModule = serverInfoModule;
         this.configFileLoader = configFileLoader;
-        this.helpModule = helpModule; // 赋值
+        this.helpModule = helpModule;
         registerServerCommand();
     }
 
     private void registerServerCommand() {
-        commandUtil.registerSubCommand(rootNode -> {
-            LiteralCommandNode<CommandSource> serverNode = LiteralArgumentBuilder.<CommandSource>literal("server")
-                    // .requires(source -> source.hasPermission("vmonitor.server")) // 如果需要，可以取消注释
+        commandUtil.registerSubCommand(root -> {
+            root.then(LiteralArgumentBuilder.<CommandSource>literal("server")
                     .executes(context -> {
-                        // 当只输入 /vmonitor server 时，显示 server 命令的帮助信息
-                        helpModule.executeServerHelp(context.getSource()); // 调用 HelpModule 的方法
+                        helpModule.executeServerHelp(context.getSource());
                         return SINGLE_SUCCESS;
                     })
                     .then(LiteralArgumentBuilder.<CommandSource>literal("list")
-                            .requires(source -> source.hasPermission("vmonitor.server.list"))
+                            // 修改此处：不直接执行 executeListAll
                             .executes(context -> {
-                                serverListModule.executeListAll(context.getSource());
+                                // 提示用法
+                                String usage = languageFileLoader.getMessage("commands.server.usage.list");
+                                context.getSource().sendMessage(miniMessage.deserialize(usage));
                                 return SINGLE_SUCCESS;
                             })
                             .then(RequiredArgumentBuilder.<CommandSource, String>argument("server_name", word())
                                     .suggests(new ServerNameSuggestionProvider(proxyServer))
                                     .executes(context -> {
-                                        // 当输入 /vmonitor server list <server_name> 时
-                                        String serverName = context.getArgument("server_name", String.class);
-                                        serverListModule.executeListPlayersOnServer(context.getSource(), serverName);
-                                        return SINGLE_SUCCESS;
-                                    })
-                            )
-                    )
-                    .then(LiteralArgumentBuilder.<CommandSource>literal("info")
-                            .requires(source -> source.hasPermission("vmonitor.server.info"))
-                            .executes(context -> {
-                                // 当只输入 /vmonitor server info 时，显示所有服务器信息
-                                serverInfoModule.executeInfoAll(context.getSource());
-                                return SINGLE_SUCCESS;
-                            })
-                            .then(RequiredArgumentBuilder.<CommandSource, String>argument("server_name", word())
-                                    .suggests(new ServerNameSuggestionProvider(proxyServer))
-                                    .executes(context -> {
-                                        // 当输入 /vmonitor server info <server_name> 时
-                                        String serverName = context.getArgument("server_name", String.class);
-                                        if ("all".equalsIgnoreCase(serverName)) {
-                                            serverInfoModule.executeInfoAll(context.getSource());
+                                        String name = context.getArgument("server_name", String.class);
+                                        if ("all".equalsIgnoreCase(name)) {
+                                            serverListModule.executeListAll(context.getSource());
                                         } else {
-                                            serverInfoModule.executeInfoSingleServer(context.getSource(), serverName);
+                                            serverListModule.executeListPlayersOnServer(context.getSource(), name);
                                         }
                                         return SINGLE_SUCCESS;
                                     })
                             )
                     )
-                    .build();
-            rootNode.addChild(serverNode);
+                    .then(LiteralArgumentBuilder.<CommandSource>literal("info")
+                            .executes(context -> {
+                                String usage = languageFileLoader.getMessage("commands.server.usage.info");
+                                context.getSource().sendMessage(miniMessage.deserialize(usage));
+                                return SINGLE_SUCCESS;
+                            })
+                            .then(RequiredArgumentBuilder.<CommandSource, String>argument("server_name", word())
+                                    .suggests(new ServerNameSuggestionProvider(proxyServer))
+                                    .executes(context -> {
+                                        String name = context.getArgument("server_name", String.class);
+                                        if ("all".equalsIgnoreCase(name)) {
+                                            serverInfoModule.executeInfoAll(context.getSource());
+                                        } else {
+                                            serverInfoModule.executeInfoSingleServer(context.getSource(), name);
+                                        }
+                                        return SINGLE_SUCCESS;
+                                    })
+                            )
+                    )
+            );
         });
     }
 
-    // 服务器名称自动补全提供者 (保持不变)
-    static class ServerNameSuggestionProvider implements SuggestionProvider<CommandSource> {
+    // 保持 ServerNameSuggestionProvider 类不变
+    class ServerNameSuggestionProvider implements SuggestionProvider<CommandSource> {
         private final ProxyServer proxyServer;
 
         public ServerNameSuggestionProvider(ProxyServer proxyServer) {
@@ -120,8 +116,8 @@ public class ServerCommand {
                     .map(server -> server.getServerInfo().getName())
                     .filter(name -> name.toLowerCase().startsWith(remaining))
                     .sorted()
-                    .forEach(name -> builder.suggest(name)); // 明确调用 suggest(String)
-            builder.suggest("all"); // 确保 "all" 选项也可用
+                    .forEach(name -> builder.suggest(name));
+            builder.suggest("all");
             return builder.buildFuture();
         }
     }

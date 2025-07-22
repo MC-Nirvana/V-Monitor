@@ -31,52 +31,61 @@ public class ConfigFileLoader {
         this.dataDirectory = dataDirectory;
     }
 
-    public void loadConfig() {
-        Path configFilePath = dataDirectory.resolve(configFileName);
-        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(configFilePath.toFile()), StandardCharsets.UTF_8)) {
-            Yaml yaml = new Yaml(new Constructor(new LoaderOptions()));
-            this.config = yaml.load(reader);
-            if (this.config == null) {
-                throw new ConfigLoadException("Config file is empty or malformed: " + configFilePath.toAbsolutePath());
-            }
-            logger.info("Config file '{}' loaded.", configFileName);
-            loadServerDisplayNames();
-        } catch (IOException e) {
-            throw new ConfigLoadException("Failed to read config file: " + configFilePath.toAbsolutePath(), e);
-        } catch (YAMLException e) {
-            throw new ConfigLoadException("Failed to parse config file (YAML syntax error): " + configFilePath.toAbsolutePath(), e);
-        } catch (Exception e) {
-            throw new ConfigLoadException("An unexpected error occurred while loading config file: " + configFilePath.toAbsolutePath(), e);
+    /**
+     * 加载配置文件。
+     * @param reader InputStreamReader 对象，用于读取配置文件内容。
+     */
+    public void loadConfig(InputStreamReader reader) {
+        Yaml yaml = new Yaml(new Constructor(new LoaderOptions()));
+        this.config = yaml.load(reader);
+        loadServerDisplayNames();
+    }
+
+
+    /**
+     * 重载配置文件。
+     */
+    public void reloadConfig() {
+        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(getConfigFilePath().toFile()), StandardCharsets.UTF_8)) {
+            loadConfig(reader);
+        } catch (IOException ignore) {
         }
+    }
+
+    /**
+     * 获取配置文件路径。
+     * @return 当前配置文件的完整路径。
+     */
+    private Path getConfigFilePath() {
+        return dataDirectory.resolve(configFileName);
     }
 
     private void loadServerDisplayNames() {
-        this.serverDisplayNames.clear();
-        @SuppressWarnings("unchecked")
-        List<Map<String, String>> aliasesList = (List<Map<String, String>>) getNestedValue("server-aliases");
-        if (aliasesList != null) {
-            for (Map<String, String> aliasEntry : aliasesList) {
-                aliasEntry.forEach((actualName, displayName) -> {
-                    if (actualName != null && !actualName.isEmpty() && displayName != null && !displayName.isEmpty()) {
-                        serverDisplayNames.put(actualName, displayName);
+        serverDisplayNames.clear(); // 清空旧数据
+        Map<String, Object> serversSection = getTable("servers");
+        if (serversSection != null) {
+            for (Map.Entry<String, Object> entry : serversSection.entrySet()) {
+                String serverKey = entry.getKey();
+                Object serverValue = entry.getValue();
+                if (serverValue instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> serverProps = (Map<String, Object>) serverValue;
+                    String displayName = (String) serverProps.get("display_name");
+                    if (displayName != null && !displayName.isEmpty()) {
+                        serverDisplayNames.put(serverKey, displayName);
                     }
-                });
+                }
             }
-            logger.debug("Loaded {} server display names.", serverDisplayNames.size());
         }
+        logger.debug("Loaded server display names: {}", serverDisplayNames);
     }
 
-    public String getServerDisplayName(String actualName) {
-        return serverDisplayNames.getOrDefault(actualName, actualName);
-    }
-
-    @SuppressWarnings("unchecked")
     private Object getNestedValue(String key) {
         String[] parts = key.split("\\.");
         Object current = this.config;
         for (String part : parts) {
             if (current instanceof Map) {
-                current = ((Map<String, Object>) current).get(part);
+                current = ((Map<?, ?>) current).get(part);
                 if (current == null) {
                     return null;
                 }
@@ -85,6 +94,10 @@ public class ConfigFileLoader {
             }
         }
         return current;
+    }
+
+    public String getServerDisplayName(String serverName) {
+        return serverDisplayNames.getOrDefault(serverName, serverName);
     }
 
     public String getString(String key) {

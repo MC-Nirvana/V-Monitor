@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 
 import java.util.Map;
 import java.util.UUID;
@@ -33,7 +34,7 @@ public class DataFileLoader {
 
     private final Gson gson = new GsonBuilder()
             .setPrettyPrinting()
-            .registerTypeAdapter(Long.class, new TimeUtil())
+            .registerTypeAdapter(Long.class, new TimeUtil()) // For TimeUtil's formatSecondsToHHmm
             .create();
 
     public static class RootData {
@@ -49,26 +50,26 @@ public class DataFileLoader {
     public static class ServerData {
         public String bootTime;
         public String lastReportGenerationDate;
-        public Map<String, DailyNewPlayersData> newPlayersToday;
-        public Map<String, Integer> totalLoginCountsInDay;
+        public Map<String, DailyNewPlayersData> newPlayersToday; // 保持 DailyNewPlayersData 类型
+        public Map<String, Integer> totalLoginCountsInDay; // 重命名
         public Map<String, Long> totalPlayTimesInDay;
-        public Map<String, Integer> totalServerLoginCounts;
+        public Map<String, Integer> totalServerLoginCounts; // 新增字段
         public Map<String, Map<String, Integer>> dailyServerLoginCounts;
 
         public ServerData() {
-            this.bootTime = "";
+            this.bootTime = TimeUtil.getCurrentDateTimeSecondString();
             this.lastReportGenerationDate = TimeUtil.getCurrentDateString();
             this.newPlayersToday = new ConcurrentHashMap<>();
-            this.totalLoginCountsInDay = new ConcurrentHashMap<>();
+            this.totalLoginCountsInDay = new ConcurrentHashMap<>(); // 初始化
             this.totalPlayTimesInDay = new ConcurrentHashMap<>();
-            this.totalServerLoginCounts = new ConcurrentHashMap<>();
+            this.totalServerLoginCounts = new ConcurrentHashMap<>(); // 初始化
             this.dailyServerLoginCounts = new ConcurrentHashMap<>();
         }
     }
 
     public static class DailyNewPlayersData {
-        public int totalNewPlayersInDay;
-        public Map<UUID, String> players;
+        public int totalNewPlayersInDay; // 重命名 'count' 为 'totalNewPlayersInDay'
+        public Map<UUID, String> players; // 重命名 'newPlayers' 为 'players'
 
         public DailyNewPlayersData() {
             this.totalNewPlayersInDay = 0;
@@ -77,48 +78,52 @@ public class DataFileLoader {
     }
 
     public static class PlayerData {
-        public String playerName;
-        public String firstJoinTime;
+        public String playerName; // 重命名 'lastKnownName' 为 'playerName'
+        public String firstJoinTime; // 重命名 'firstLoginTime' 为 'firstJoinTime'
         public String lastLoginTime;
-        public String lastQuitTime;
-        public Long totalPlayTime;
-        public int totalLoginCount;
-        public Map<String, DailyLoginData> dailyLogins;
+        public String lastQuitTime; // 新增字段
+        public long totalPlayTime; // 总游戏时长，秒
+        public int totalLoginCount; // 新增字段
+        public Map<String, DailyLoginData> dailyLogins; // 更改类型和名称
         public Map<String, WeeklyLoginData> weeklyLogins;
         public Map<String, Integer> loggedInServerLoginCounts;
+        public Map<String, String> lastLoginServerTimes;
 
-        public PlayerData(String playerName, String firstJoinTime) {
-            this.playerName = playerName;
-            this.firstJoinTime = firstJoinTime;
-            this.lastLoginTime = "";
-            this.lastQuitTime = "";
-            this.totalPlayTime = 0L;
-            this.totalLoginCount = 0;
-            this.dailyLogins = new ConcurrentHashMap<>();
+        public PlayerData(String name) {
+            this.playerName = name;
+            this.firstJoinTime = TimeUtil.getCurrentDateTimeSecondString();
+            this.lastLoginTime = TimeUtil.getCurrentDateTimeSecondString();
+            this.lastQuitTime = ""; // 初始为空
+            this.totalPlayTime = 0;
+            this.totalLoginCount = 0; // 初始化
+            this.dailyLogins = new ConcurrentHashMap<>(); // 初始化
             this.weeklyLogins = new ConcurrentHashMap<>();
             this.loggedInServerLoginCounts = new ConcurrentHashMap<>();
+            this.lastLoginServerTimes = new ConcurrentHashMap<>();
         }
     }
 
     public static class DailyLoginData {
         public int loginCount;
-        public Long totalPlayTimeInDay;
-        public String lastLoginTime;
+        public long totalPlayTimeInDay; // 秒
+        public String lastLoginTime; // 格式 "yyyy-MM-dd HH:mm:ss"
 
         public DailyLoginData() {
             this.loginCount = 0;
-            this.totalPlayTimeInDay = 0L;
+            this.totalPlayTimeInDay = 0;
             this.lastLoginTime = "";
         }
     }
 
     public static class WeeklyLoginData {
-        public int loginCount;
-        public Long totalPlayTimeInWeek;
+        public int loginCount; // 新增字段
+        public long totalPlayTimeInWeek; // 秒
+        public String lastLoginTime; // 新增字段
 
         public WeeklyLoginData() {
             this.loginCount = 0;
-            this.totalPlayTimeInWeek = 0L;
+            this.totalPlayTimeInWeek = 0;
+            this.lastLoginTime = "";
         }
     }
 
@@ -126,7 +131,27 @@ public class DataFileLoader {
         this.logger = logger;
         this.dataDirectory = dataDirectory;
         this.playerDataFilePath = dataDirectory.resolve(playerDataFileName);
-        this.rootData = new RootData();
+        this.rootData = new RootData(); // 初始化一个空RootData，防止NPE
+    }
+
+    /**
+     * 从提供的 InputStreamReader 加载数据文件。
+     * 此方法现在只关注解析逻辑，将文件I/O异常和JSON解析异常抛出，由调用者处理。
+     *
+     * @param reader 用于读取数据文件的 InputStreamReader。
+     * @throws JsonSyntaxException 如果JSON文件语法错误。
+     */
+    public void loadData(InputStreamReader reader) {
+        TypeToken<RootData> typeToken = new TypeToken<RootData>() {};
+        this.rootData = gson.fromJson(reader, typeToken.getType());
+    }
+
+    public void savePlayerData() {
+        try (FileWriter writer = new FileWriter(playerDataFilePath.toFile(), StandardCharsets.UTF_8)) {
+            gson.toJson(rootData, writer);
+        } catch (IOException e) {
+            logger.error("Failed to save player data to '{}': {}", playerDataFileName, e.getMessage());
+        }
     }
 
     public RootData getRootData() {
@@ -137,99 +162,85 @@ public class DataFileLoader {
         return rootData.players.get(uuid);
     }
 
-    public void loadPlayerData() throws PlayerDataLoadException {
-        if (!Files.exists(playerDataFilePath)) {
-            logger.error("Player data file '{}' does not exist after initial copy. This is a critical error.", playerDataFileName);
-            throw new PlayerDataLoadException("Player data file not found after initialization.");
-        }
-        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(playerDataFilePath.toFile()), StandardCharsets.UTF_8)) {
-            TypeToken<RootData> typeToken = new TypeToken<RootData>() {};
-            RootData loadedData = gson.fromJson(reader, typeToken.getType());
-            if (loadedData == null) {
-                logger.warn("Player data file '{}' is empty or malformed. Initializing new data in memory.", playerDataFileName);
-                this.rootData = new RootData();
-            } else {
-                this.rootData = loadedData;
-                if (this.rootData.server.totalServerLoginCounts == null) {
-                    this.rootData.server.totalServerLoginCounts = new ConcurrentHashMap<>();
-                }
-                if (this.rootData.server.dailyServerLoginCounts == null) {
-                    this.rootData.server.dailyServerLoginCounts = new ConcurrentHashMap<>();
-                }
-                this.rootData.players.values().forEach(playerData -> {
-                    if (playerData.loggedInServerLoginCounts == null) {
-                        playerData.loggedInServerLoginCounts = new ConcurrentHashMap<>();
-                    }
-                });
-            }
-        } catch (IOException | JsonSyntaxException e) {
-            logger.error("Failed to load player data from '{}'. Initializing new data in memory. Error: {}", playerDataFileName, e.getMessage());
-            this.rootData = new RootData(); // 加载失败时初始化新数据
-            throw new PlayerDataLoadException("Failed to load player data", e);
-        }
-    }
+    public void createPlayerData(UUID uuid, String playerName) {
+        PlayerData newPlayer = new PlayerData(playerName);
+        rootData.players.put(uuid, newPlayer);
 
-    public void savePlayerData() {
-        try (FileWriter writer = new FileWriter(playerDataFilePath.toFile(), StandardCharsets.UTF_8)) {
-            gson.toJson(rootData, writer);
-            logger.debug("Player data saved successfully.");
-        } catch (IOException e) {
-            logger.error("Failed to save player data to '{}': {}", playerDataFileName, e.getMessage());
-        }
+        String currentDate = TimeUtil.getCurrentDateString();
+        // 更新 DailyNewPlayersData
+        DailyNewPlayersData dailyNewPlayers = rootData.server.newPlayersToday.computeIfAbsent(currentDate, k -> new DailyNewPlayersData());
+        dailyNewPlayers.players.put(uuid, playerName);
+        dailyNewPlayers.totalNewPlayersInDay++; // 更新新玩家总数
+
+        // 更新 DailyLoginData for player's first login
+        DailyLoginData dailyLogin = new DailyLoginData();
+        dailyLogin.loginCount = 1;
+        dailyLogin.lastLoginTime = TimeUtil.getCurrentDateTimeSecondString();
+        newPlayer.dailyLogins.put(currentDate, dailyLogin);
+
+        // 更新 WeeklyLoginData for player's first login
+        String currentWeek = TimeUtil.getCurrentWeekString();
+        WeeklyLoginData weeklyLogin = new WeeklyLoginData();
+        weeklyLogin.loginCount = 1;
+        weeklyLogin.lastLoginTime = TimeUtil.getCurrentDateTimeSecondString();
+        newPlayer.weeklyLogins.put(currentWeek, weeklyLogin);
+
+        // 更新服务器的总登录次数（每日）
+        rootData.server.totalLoginCountsInDay.merge(currentDate, 1, Integer::sum);
+
+        savePlayerData();
     }
 
     public void updatePlayerOnLogin(UUID uuid, String playerName) {
+        PlayerData playerData = rootData.players.get(uuid);
+        if (playerData == null) {
+            logger.warn("Attempted to update login for unknown player: {}. Creating new data.", uuid);
+            createPlayerData(uuid, playerName);
+            playerData = rootData.players.get(uuid); // Re-fetch after creation
+        }
+
+        playerData.playerName = playerName; // 更新玩家名称
+        playerData.lastLoginTime = TimeUtil.getCurrentDateTimeSecondString();
+        playerData.totalLoginCount++; // 更新总登录次数
+
         String currentDate = TimeUtil.getCurrentDateString();
-        String currentDateTimeSecond = TimeUtil.getCurrentDateTimeSecondString();
-        String currentWeek = TimeUtil.getCurrentWeekString();
-        PlayerData playerData = rootData.players.computeIfAbsent(uuid, k -> {
-            logger.info("New player detected: {}. Initializing data.", playerName);
-            String firstJoinTime = currentDateTimeSecond;
-            PlayerData newPlayer = new PlayerData(playerName, firstJoinTime);
-            DailyNewPlayersData dailyNewPlayers = rootData.server.newPlayersToday.computeIfAbsent(currentDate, d -> new DailyNewPlayersData());
-            dailyNewPlayers.totalNewPlayersInDay++;
-            dailyNewPlayers.players.put(uuid, playerName);
-            return newPlayer;
-        });
-        playerData.playerName = playerName;
-        playerData.lastLoginTime = currentDateTimeSecond;
-        playerData.totalLoginCount++;
-        DailyLoginData dailyLogin = playerData.dailyLogins.computeIfAbsent(currentDate, d -> new DailyLoginData());
+        // 更新玩家每日登录数据
+        DailyLoginData dailyLogin = playerData.dailyLogins.computeIfAbsent(currentDate, k -> new DailyLoginData());
         dailyLogin.loginCount++;
-        dailyLogin.lastLoginTime = currentDateTimeSecond;
-        WeeklyLoginData weeklyLogin = playerData.weeklyLogins.computeIfAbsent(currentWeek, w -> new WeeklyLoginData());
+        dailyLogin.lastLoginTime = playerData.lastLoginTime;
+
+        // 更新玩家每周登录数据
+        String currentWeek = TimeUtil.getCurrentWeekString();
+        WeeklyLoginData weeklyLogin = playerData.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
         weeklyLogin.loginCount++;
+        weeklyLogin.lastLoginTime = playerData.lastLoginTime;
+
+        // 更新服务器的总登录次数（每日）
         rootData.server.totalLoginCountsInDay.merge(currentDate, 1, Integer::sum);
         savePlayerData();
     }
 
-    public void updatePlayerOnQuit(UUID uuid, String playerName, com.velocitypowered.api.proxy.server.RegisteredServer disconnectedFromServer, Duration sessionDuration) {
+    public void updatePlayerOnQuit(UUID uuid, String playerName, String disconnectedFromServer, Duration sessionDuration) {
         PlayerData playerData = rootData.players.get(uuid);
         if (playerData == null) {
-            logger.warn("Attempted to update data for unknown player: {}({}).", playerName, uuid);
+            logger.warn("Attempted to update quit for unknown player: {}. Skipping.", uuid);
             return;
         }
-        String currentDateTimeSecond = TimeUtil.getCurrentDateTimeSecondString();
+
+        playerData.lastQuitTime = TimeUtil.getCurrentDateTimeSecondString(); // 更新最后退出时间
+        playerData.totalPlayTime += sessionDuration.getSeconds(); // 更新总游戏时长
+
         String currentDate = TimeUtil.getCurrentDateString();
+        // 更新玩家每日游戏时长
+        DailyLoginData dailyLogin = playerData.dailyLogins.computeIfAbsent(currentDate, k -> new DailyLoginData());
+        dailyLogin.totalPlayTimeInDay += sessionDuration.getSeconds();
+
+        // 更新玩家每周游戏时长
         String currentWeek = TimeUtil.getCurrentWeekString();
-        playerData.lastQuitTime = currentDateTimeSecond;
-        playerData.totalPlayTime += sessionDuration.getSeconds();
-        DailyLoginData dailyLogin = playerData.dailyLogins.get(currentDate);
-        if (dailyLogin != null) {
-            dailyLogin.totalPlayTimeInDay += sessionDuration.getSeconds();
-        } else {
-            dailyLogin = new DailyLoginData();
-            dailyLogin.totalPlayTimeInDay = sessionDuration.getSeconds();
-            playerData.dailyLogins.put(currentDate, dailyLogin);
-        }
-        WeeklyLoginData weeklyLogin = playerData.weeklyLogins.get(currentWeek);
-        if (weeklyLogin != null) {
-            weeklyLogin.totalPlayTimeInWeek += sessionDuration.getSeconds();
-        } else {
-            weeklyLogin = new WeeklyLoginData();
-            weeklyLogin.totalPlayTimeInWeek = sessionDuration.getSeconds();
-            playerData.weeklyLogins.put(currentWeek, weeklyLogin);
-        }
+        WeeklyLoginData weeklyLogin = playerData.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
+        weeklyLogin.totalPlayTimeInWeek += sessionDuration.getSeconds();
+
+        // 更新服务器总游戏时长（每日）
         rootData.server.totalPlayTimesInDay.merge(currentDate, sessionDuration.getSeconds(), Long::sum);
         savePlayerData();
     }
@@ -237,24 +248,21 @@ public class DataFileLoader {
     public void updatePlayerServerLogin(UUID uuid, String serverName) {
         PlayerData playerData = rootData.players.get(uuid);
         if (playerData == null) {
-            logger.warn("Attempted to update server login for unknown player: {}.", uuid);
+            logger.warn("Attempted to update server login for unknown player: {}. Please ensure player data is created.", uuid);
             return;
         }
         String currentDate = TimeUtil.getCurrentDateString();
+
+        // 更新玩家在该服务器的登录次数
         playerData.loggedInServerLoginCounts.merge(serverName, 1, Integer::sum);
+        playerData.lastLoginServerTimes.put(serverName, TimeUtil.getCurrentDateTimeSecondString()); // 更新最后一次登录该服务器的时间
+
+        // 更新服务器总登录次数 (所有时间段)
         rootData.server.totalServerLoginCounts.merge(serverName, 1, Integer::sum);
+
+        // 更新服务器每日登录次数
         Map<String, Integer> dailyServerLogins = rootData.server.dailyServerLoginCounts.computeIfAbsent(currentDate, k -> new ConcurrentHashMap<>());
         dailyServerLogins.merge(serverName, 1, Integer::sum);
         savePlayerData();
-    }
-
-    public static class PlayerDataLoadException extends Exception {
-        public PlayerDataLoadException(String message) {
-            super(message);
-        }
-
-        public PlayerDataLoadException(String message, Throwable cause) {
-            super(message, cause);
-        }
     }
 }

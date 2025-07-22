@@ -21,15 +21,14 @@ public class ReloadCommand {
     }
 
     private void registerReloadCommand() {
-        commandUtil.registerSubCommand(rootNode -> {
-            LiteralCommandNode<CommandSource> reloadNode = LiteralArgumentBuilder.<CommandSource>literal("reload")
+        commandUtil.registerSubCommand(root -> {
+            root.then(LiteralArgumentBuilder.<CommandSource>literal("reload")
                     .requires(source -> source.hasPermission("vmonitor.reload"))
                     .executes(context -> {
-                        reloadModule.executeReload(context.getSource()); // 委托给 ReloadModule 处理执行逻辑
+                        reloadModule.executeReload(context.getSource());
                         return SINGLE_SUCCESS;
                     })
-                    .build();
-            rootNode.addChild(reloadNode);
+            );
         });
     }
 }

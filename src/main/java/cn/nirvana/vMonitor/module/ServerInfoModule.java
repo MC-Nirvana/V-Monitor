@@ -39,30 +39,34 @@ public class ServerInfoModule {
                     .thenAccept(ping -> {
                         String onlinePlayers = String.valueOf(ping.getPlayers().map(ServerPing.Players::getOnline).orElse(0));
                         String maxPlayers = String.valueOf(ping.getPlayers().map(ServerPing.Players::getMax).orElse(0));
-                        String status = languageFileLoader.getMessage("global.online");
+                        String status = languageFileLoader.getMessage("commands.server.info.status_online");
                         String motd = PlainTextComponentSerializer.plainText().serialize(ping.getDescriptionComponent());
 
 
-                        String infoMessage = languageFileLoader.getMessage("commands.server.info.single_format")
+                        String infoMessage = languageFileLoader.getMessage("commands.server.info.specific_format")
+                                .replace("{server_name}", serverNameArg)
                                 .replace("{server_display_name}", serverDisplayName)
-                                .replace("{online_players}", onlinePlayers)
-                                .replace("{max_players}", maxPlayers)
+                                .replace("{version}", Optional.ofNullable(ping.getVersion())
+                                        .map(ServerPing.Version::getName)
+                                        .orElse(languageFileLoader.getMessage("commands.server.info.no_version")))
                                 .replace("{status}", status)
+                                .replace("{online_players}", onlinePlayers)
                                 .replace("{motd}", motd);
                         source.sendMessage(miniMessage.deserialize(infoMessage));
                     })
                     .exceptionally(throwable -> {
-                        String infoMessage = languageFileLoader.getMessage("commands.server.info.single_format")
+                        String infoMessage = languageFileLoader.getMessage("commands.server.info.specific_format")
+                                .replace("{server_name}", serverNameArg)
                                 .replace("{server_display_name}", serverDisplayName)
-                                .replace("{online_players}", "0")
-                                .replace("{max_players}", "0")
-                                .replace("{status}", languageFileLoader.getMessage("global.offline"))
-                                .replace("{motd}", languageFileLoader.getMessage("global.server_offline"));
+                                .replace("{version}", languageFileLoader.getMessage("commands.server.info.no_version"))
+                                .replace("{status}", languageFileLoader.getMessage("commands.server.info.status_offline"))
+                                .replace("{online_players}", languageFileLoader.getMessage("commands.server.info.no_players"))
+                                .replace("{motd}", languageFileLoader.getMessage("commands.server.info.no_motd"));
                         source.sendMessage(miniMessage.deserialize(infoMessage));
                         return null;
                     });
         } else {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.not_found").replace("{server}", serverNameArg)));
+            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.info.not_found").replace("{server}", serverNameArg)));
         }
     }
 
@@ -70,7 +74,7 @@ public class ServerInfoModule {
         List<RegisteredServer> servers = proxyServer.getAllServers().stream().toList();
 
         if (servers.isEmpty()) {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.no_servers")));
+            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.info.no_servers")));
             return;
         }
 
@@ -79,7 +83,7 @@ public class ServerInfoModule {
         AtomicInteger runningServersCount = new AtomicInteger(0);
         AtomicInteger offlineServersCount = new AtomicInteger(0);
 
-        String serverStatusFormat = languageFileLoader.getMessage("commands.server.info.status_line_format");
+        String serverStatusFormat = languageFileLoader.getMessage("commands.server.info.server_status_list_format");
 
         // 解决：未检查的赋值警告
         @SuppressWarnings("unchecked")
@@ -92,13 +96,13 @@ public class ServerInfoModule {
 
                             String onlinePlayers = String.valueOf(ping.getPlayers().map(ServerPing.Players::getOnline).orElse(0));
                             String maxPlayers = String.valueOf(ping.getPlayers().map(ServerPing.Players::getMax).orElse(0));
-                            String status = languageFileLoader.getMessage("global.online");
+                            String status = languageFileLoader.getMessage("commands.server.info.status_online");
 
                             String currentServerLine = serverStatusFormat
+                                    .replace("{server_name}", server.getServerInfo().getName())
                                     .replace("{server_display_name}", serverDisplayName)
-                                    .replace("{online_players}", onlinePlayers)
-                                    .replace("{max_players}", maxPlayers)
-                                    .replace("{status}", status);
+                                    .replace("{status}", status)
+                                    .replace("{online_players}", onlinePlayers);
 
                             serverStatusList.append(miniMessage.serialize(miniMessage.deserialize(currentServerLine))).append("\n");
                         })
@@ -106,10 +110,10 @@ public class ServerInfoModule {
                             String serverDisplayName = configFileLoader.getServerDisplayName(server.getServerInfo().getName());
                             offlineServersCount.incrementAndGet();
                             String currentServerLine = serverStatusFormat
+                                    .replace("{server_name}", server.getServerInfo().getName())
                                     .replace("{server_display_name}", serverDisplayName)
-                                    .replace("{online_players}", "0")
-                                    .replace("{max_players}", "0")
-                                    .replace("{status}", languageFileLoader.getMessage("global.offline"));
+                                    .replace("{status}", languageFileLoader.getMessage("commands.server.info.status_offline"))
+                                    .replace("{online_players}", languageFileLoader.getMessage("commands.server.info.no_players"));
                             serverStatusList.append(miniMessage.serialize(miniMessage.deserialize(currentServerLine))).append("\n");
                             return null;
                         })
@@ -117,12 +121,12 @@ public class ServerInfoModule {
 
         CompletableFuture.allOf(futures)
                 .thenRun(() -> {
-                    String proxyVersion = proxyServer.getVersion().getName();
+                    String proxyVersion = proxyServer.getVersion().getVersion();
                     String allFormat = languageFileLoader.getMessage("commands.server.info.all_format")
                             .replace("{proxy_version}", proxyVersion)
                             .replace("{total_player}", String.valueOf(totalOnlinePlayers.get()))
                             .replace("{server_count}", String.valueOf(servers.size()))
-                            .replace("{running_servers}", String.valueOf(runningServersCount.get()))
+                            .replace("{online_servers}", String.valueOf(runningServersCount.get()))
                             .replace("{offline_servers}", String.valueOf(offlineServersCount.get()))
                             .replace("{server_status_list}", serverStatusList.toString().trim());
                     source.sendMessage(miniMessage.deserialize(allFormat));

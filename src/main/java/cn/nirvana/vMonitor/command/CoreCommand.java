@@ -37,16 +37,13 @@ public class CoreCommand {
         String rootLiteral = "vmonitor";
         Set<String> aliases = new HashSet<>(Arrays.asList("vm"));
 
-        // 定义根命令的执行逻辑，现在 Consumer 接收 LiteralArgumentBuilder
-        Consumer<LiteralArgumentBuilder<CommandSource>> rootCommandConfigurer = (rootBuilder) -> {
-            // 在 builder 上调用 executes
-            rootBuilder.executes(context -> {
+        Consumer<LiteralArgumentBuilder<CommandSource>> rootConfigurer = root -> {
+            root.executes(context -> {
                 helpModule.executeHelp(context.getSource());
                 return SINGLE_SUCCESS;
             });
         };
 
-        // 将配置器传递给 CommandUtil
-        commandUtil.initializeRootCommand(rootLiteral, aliases, rootCommandConfigurer);
+        commandUtil.initializeRootCommand(rootLiteral, aliases, rootConfigurer);
     }
 }

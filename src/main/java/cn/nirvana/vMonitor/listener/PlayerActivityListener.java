@@ -35,7 +35,8 @@ public class PlayerActivityListener {
     private final MiniMessage miniMessage;
     private final VMonitor plugin;
     private final Logger logger;
-    private final Map<UUID, LocalDateTime> playerLoginTimes;
+    private final Map<UUID, LocalDateTime> playerLoginTimes; // 存储玩家登录时间
+    private final Map<UUID, String> playerCurrentServers; // 新增：存储玩家当前所在的服务器名称
 
     public PlayerActivityListener(ProxyServer proxyServer, ConfigFileLoader configFileLoader,
                                   LanguageFileLoader languageFileLoader, DataFileLoader dataFileLoader,
@@ -48,55 +49,93 @@ public class PlayerActivityListener {
         this.plugin = plugin;
         this.logger = logger;
         this.playerLoginTimes = new ConcurrentHashMap<>();
+        this.playerCurrentServers = new ConcurrentHashMap<>(); // 初始化新的 Map
     }
 
+    /**
+     * 当玩家登录时记录时间并更新数据。
+     *
+     * @param event 登录事件
+     */
     @Subscribe
-    public void onLogin(LoginEvent event) {
+    public void onPlayerLogin(LoginEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         String playerName = player.getUsername();
-        playerLoginTimes.put(uuid, LocalDateTime.now());
+
+        playerLoginTimes.put(uuid, LocalDateTime.now()); // 记录登录时间
+
         dataFileLoader.updatePlayerOnLogin(uuid, playerName);
-        if (dataFileLoader.getPlayerData(uuid) != null && dataFileLoader.getPlayerData(uuid).totalLoginCount == 1) {
-            sendPlayerActivityMessage(playerName, "player_activity.first_join", null, null);
-        }
+        sendPlayerActivityMessage(playerName, "player_activity.login", null, null);
     }
 
+    /**
+     * 当玩家连接到服务器时更新数据（例如，记录服务器登录次数）。
+     * 同时，记录玩家当前所在的服务器。
+     *
+     * @param event 服务器连接事件
+     */
     @Subscribe
     public void onServerConnected(ServerConnectedEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         String playerName = player.getUsername();
-        RegisteredServer previousServer = event.getPreviousServer().orElse(null);
-        RegisteredServer currentServer = event.getServer();
-        dataFileLoader.updatePlayerServerLogin(uuid, currentServer.getServerInfo().getName());
-        if (previousServer != null) {
-            String fromServerName = configFileLoader.getServerDisplayName(previousServer.getServerInfo().getName());
-            String toServerName = configFileLoader.getServerDisplayName(currentServer.getServerInfo().getName());
-            sendPlayerActivityMessage(playerName, "player_activity.switch", fromServerName, toServerName);
+        String serverName = event.getServer().getServerInfo().getName(); // 获取目标服务器名称
+
+        // 记录玩家当前连接的服务器
+        playerCurrentServers.put(uuid, serverName);
+
+        dataFileLoader.updatePlayerServerLogin(uuid, serverName);
+
+        Optional<RegisteredServer> previousServer = event.getPreviousServer();
+        if (previousServer.isPresent()) {
+            sendPlayerActivityMessage(playerName, "player_activity.switch",
+                    configFileLoader.getServerDisplayName(previousServer.get().getServerInfo().getName()),
+                    configFileLoader.getServerDisplayName(serverName));
         }
     }
 
+    /**
+     * 当玩家断开连接时，计算在线时长并更新数据。
+     *
+     * @param event 断开连接事件
+     */
     @Subscribe
-    public void onDisconnect(DisconnectEvent event) {
+    public void onPlayerQuit(DisconnectEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         String playerName = player.getUsername();
-        LocalDateTime loginTime = playerLoginTimes.remove(uuid);
+        LocalDateTime loginTime = playerLoginTimes.remove(uuid); // 获取并移除登录时间
+
+        // 获取玩家最后所在的服务器名称，并从 Map 中移除
+        String disconnectedServerName = playerCurrentServers.remove(uuid);
+
         Duration sessionDuration = Duration.ZERO;
         if (loginTime != null) {
             sessionDuration = Duration.between(loginTime, LocalDateTime.now());
         }
-        Optional<RegisteredServer> currentServer = player.getCurrentServer().map(serverConnection -> serverConnection.getServer());
-        RegisteredServer disconnectedFromServer = currentServer.orElse(null);
-        dataFileLoader.updatePlayerOnQuit(uuid, playerName, disconnectedFromServer, sessionDuration);
-        String serverName = disconnectedFromServer != null ? configFileLoader.getServerDisplayName(disconnectedFromServer.getServerInfo().getName()) : null;
-        sendPlayerActivityMessage(playerName, "player_activity.quit", serverName, null);
+
+        dataFileLoader.updatePlayerOnQuit(uuid, playerName, disconnectedServerName, sessionDuration);
+
+        // 使用配置的显示名称来发送消息
+        String displayServerName = disconnectedServerName != null ? configFileLoader.getServerDisplayName(disconnectedServerName) : null;
+        sendPlayerActivityMessage(playerName, "player_activity.quit", displayServerName, null);
     }
 
+    /**
+     * 发送玩家活动消息到代理服。
+     *
+     * @param playerName 玩家名称
+     * @param messageKey 语言文件中的消息键
+     * @param fromServer 玩家来自的服务器显示名称 (可选)
+     * @param toServer   玩家前往的服务器显示名称 (可选)
+     */
     private void sendPlayerActivityMessage(String playerName, String messageKey, String fromServer, String toServer) {
+        // 调度任务以避免在事件线程中执行耗时操作，同时允许Velocity处理其他事件。
+        // 此处的lambda表达式包含多条语句和局部变量引用，不适合直接替换为方法引用。
         plugin.getProxyServer().getScheduler().buildTask(plugin, () -> {
             String message = languageFileLoader.getMessage(messageKey);
+            // 检查消息是否存在且未缺失
             if (message != null && !message.isEmpty() && !message.startsWith("<red>Missing Language Key:")) {
                 String formattedMessage = message.replace("{player}", playerName);
                 if (fromServer != null) {
@@ -108,8 +147,9 @@ public class PlayerActivityListener {
                 Component component = miniMessage.deserialize(formattedMessage);
                 proxyServer.sendMessage(component);
             } else {
-                logger.warn("Language key '{}' is missing or malformed for player activity message. " +  "Check your language files. Message won't be sent.", messageKey);
+                logger.warn("Language key '{}' is missing or malformed for player activity message. " +
+                        "Check your language files. Message won't be sent.", messageKey);
             }
-        }).delay(500, TimeUnit.MILLISECONDS).schedule();
+        }).delay(500, TimeUnit.MILLISECONDS).schedule(); // 延迟发送以避免立即发送可能导致的聊天刷屏
     }
 }

@@ -5,6 +5,8 @@ import cn.nirvana.vMonitor.loader.*;
 import cn.nirvana.vMonitor.listener.PlayerActivityListener;
 import cn.nirvana.vMonitor.module.*; // 导入所有新的模块类
 import cn.nirvana.vMonitor.util.CommandUtil; // 导入 CommandUtil
+import cn.nirvana.vMonitor.util.FileUtil; // 导入 FileUtil
+import cn.nirvana.vMonitor.exceptions.FileException; // 导入 FileException
 
 import com.google.inject.Inject;
 
@@ -39,17 +41,22 @@ import java.util.Set;
         version = "1.3.0",
         url = "https://github.com/MC-Nirvana/V-Monitor",
         description = "Monitor your Velocity Proxy player activity and server statistics.",
-        authors = {"MC_Nirvana"}
+        authors = {
+                "MC-Nirvana"
+        }
 )
 public class VMonitor {
 
     private final ProxyServer proxyServer;
     private final Logger logger;
     private final Path dataDirectory;
-    private final PluginContainer pluginContainer;
+    private final PluginContainer pluginContainer; // 注入 PluginContainer
+
     private ConfigFileLoader configFileLoader;
     private LanguageFileLoader languageFileLoader;
     private DataFileLoader dataFileLoader;
+    private FileUtil fileUtil; // 新增 FileUtil 实例
+
     private MiniMessage miniMessage;
 
     @Inject
@@ -57,124 +64,160 @@ public class VMonitor {
         this.proxyServer = proxyServer;
         this.logger = logger;
         this.dataDirectory = dataDirectory;
-        this.pluginContainer = pluginContainer;
+        this.pluginContainer = pluginContainer; // 注入 PluginContainer
+        this.miniMessage = MiniMessage.miniMessage();
+        this.fileUtil = new FileUtil(logger, dataDirectory); // 初始化 FileUtil
     }
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        logger.info("V-Monitor is initializing...");
+        logger.info("V-Monitor plugin is starting...");
 
-        if (!Files.exists(dataDirectory)) {
+        // 初始化目录路径
+        Path langDirectory = dataDirectory.resolve("lang");
+
+        // 初始化判定逻辑
+        boolean dataDirExists = Files.exists(dataDirectory);
+        boolean langDirExists = Files.exists(langDirectory);
+
+        // 执行初始化判定逻辑
+        if (!dataDirExists && !langDirExists) {
+            // 情况 1：数据目录和 lang 子目录都不存在 → 第一次加载
             try {
-                Files.createDirectories(dataDirectory);
-                logger.info("Created data directory: {}", dataDirectory.toAbsolutePath());
+                Files.createDirectories(langDirectory);
+                logger.info("Data directory and lang subdirectory created.");
+                fileUtil.releaseConfigFile();
+                fileUtil.releaseLanguageFiles();
+                fileUtil.releaseDataFile();
             } catch (IOException e) {
-                logger.error("Failed to create data directory: {}", dataDirectory.toAbsolutePath(), e);
-                return;
+                logger.error("Failed to create directories or release default files: {}", e.getMessage());
+                throw new RuntimeException("Critical error during plugin initialization.", e);
+            }
+
+        } else if (dataDirExists && !langDirExists) {
+            // 情况 2：数据目录存在，但 lang 子目录不存在 → lang 子目录丢失
+            try {
+                Files.createDirectories(langDirectory);
+                logger.info("Lang subdirectory created.");
+                fileUtil.releaseLanguageFiles();
+            } catch (IOException e) {
+                logger.error("Failed to create lang directory: {}", e.getMessage());
+                throw new RuntimeException("Critical error during lang directory creation.", e);
+            }
+
+        } else if (dataDirExists && langDirExists) {
+            // 情况 3：数据目录和 lang 子目录都存在 → 正常加载
+            logger.info("Data directory and lang subdirectory already exist. Proceeding with normal initialization.");
+        }
+
+        // 初始化 loader
+        this.configFileLoader = new ConfigFileLoader(logger, dataDirectory);
+        this.languageFileLoader = new LanguageFileLoader(logger, dataDirectory, configFileLoader);
+        this.dataFileLoader = new DataFileLoader(logger, dataDirectory);
+
+        // 文件路径（延迟构造 langPath）
+        Path configPath = dataDirectory.resolve("config.yml");
+        Path dataPath = dataDirectory.resolve("data.json");
+
+        // 1. 校验并加载 config.yml
+        try {
+            fileUtil.verifyFile(configPath, "config");
+            fileUtil.loadFile(configPath, "Config", configFileLoader, configFileLoader::loadConfig);
+        } catch (FileException e) {
+            logger.error("Config file verification or loading failed: {}", e.getMessage());
+            try {
+                logger.warn("Repairing config.yml...");
+                fileUtil.repairFile(configPath, "config.yml", "config");
+                fileUtil.verifyFile(configPath, "config");
+                fileUtil.loadFile(configPath, "Config", configFileLoader, configFileLoader::loadConfig);
+            } catch (FileException repairException) {
+                logger.error("Failed to repair config file: {}", repairException.getMessage());
+                throw new RuntimeException("Critical config error. Plugin cannot start.", repairException);
             }
         }
 
-        boolean configCopied = copyDefaultResource("config.yml", "config.yml", "config file");
-        boolean langFolderCopied = copyDefaultLanguageFiles("lang", "lang folder");
-
-        if (!configCopied || !langFolderCopied) {
-            logger.error("Failed to copy default configuration or language files. Plugin may not function correctly.");
+        // 2. 构造 langPath 并加载语言文件
+        String langKey = configFileLoader.getLanguageKey();
+        if (langKey == null || langKey.isEmpty()) {
+            logger.error("Language key is missing or empty. This should not happen in production.");
+            throw new RuntimeException("Critical config error: 'language.default' is missing or empty.");
         }
 
-        this.miniMessage = MiniMessage.miniMessage();
-        this.configFileLoader = new ConfigFileLoader(logger, dataDirectory);
-        configFileLoader.loadConfig();
-        this.languageFileLoader = new LanguageFileLoader(logger, dataDirectory, configFileLoader);
-        languageFileLoader.loadLanguage();
-
-        this.dataFileLoader = new DataFileLoader(logger, dataDirectory);
+        Path langPath = langDirectory.resolve(langKey + ".yml");
 
         try {
-            dataFileLoader.loadPlayerData();
-        } catch (DataFileLoader.PlayerDataLoadException e) {
-            logger.error("Failed to load player data: {}", e.getMessage());
+            fileUtil.verifyFile(langPath, "language");
+            fileUtil.loadFile(langPath, "Language", languageFileLoader, languageFileLoader::loadLanguage);
+        } catch (FileException e) {
+            logger.error("Language file verification or loading failed: {}", e.getMessage());
+            try {
+                logger.warn("Repairing language file...");
+                fileUtil.repairFile(langPath, "lang/" + langKey + ".yml", "language");
+                fileUtil.verifyFile(langPath, "language");
+                fileUtil.loadFile(langPath, "Language", languageFileLoader, languageFileLoader::loadLanguage);
+            } catch (FileException repairException) {
+                logger.error("Failed to repair language file: {}", repairException.getMessage());
+                throw new RuntimeException("Critical language file error. Plugin cannot start.", repairException);
+            }
         }
 
+        // 3. 校验并加载 data.json
+        try {
+            fileUtil.verifyFile(dataPath, "data");
+            fileUtil.loadFile(dataPath, "Data", dataFileLoader, dataFileLoader::loadData);
+        } catch (FileException e) {
+            logger.error("Data file verification or loading failed: {}", e.getMessage());
+            try {
+                logger.warn("Repairing data.json...");
+                fileUtil.repairFile(dataPath, "data.json", "data");
+                fileUtil.verifyFile(dataPath, "data");
+                fileUtil.loadFile(dataPath, "Data", dataFileLoader, dataFileLoader::loadData);
+            } catch (FileException repairException) {
+                logger.error("Failed to repair data file: {}", repairException.getMessage());
+                throw new RuntimeException("Critical data file error. Plugin cannot start.", repairException);
+            }
+        }
 
+        // 注册事件监听器
+        proxyServer.getEventManager().register(this, new PlayerActivityListener(proxyServer, configFileLoader, languageFileLoader, dataFileLoader, miniMessage, this, logger));
+
+        // 初始化并注册命令
         CommandUtil commandUtil = new CommandUtil(proxyServer.getCommandManager(), logger, pluginContainer);
 
         HelpModule helpModule = new HelpModule(languageFileLoader, miniMessage);
-        ServerListModule serverListModule = new ServerListModule(proxyServer, configFileLoader, languageFileLoader, miniMessage);
-        ServerInfoModule serverInfoModule = new ServerInfoModule(proxyServer, languageFileLoader, miniMessage, configFileLoader);
         PluginListModule pluginListModule = new PluginListModule(proxyServer, languageFileLoader, miniMessage);
         PluginInfoModule pluginInfoModule = new PluginInfoModule(proxyServer, languageFileLoader, miniMessage);
+        ServerListModule serverListModule = new ServerListModule(proxyServer, configFileLoader, languageFileLoader, miniMessage);
+        ServerInfoModule serverInfoModule = new ServerInfoModule(proxyServer, languageFileLoader, miniMessage, configFileLoader);
         ReloadModule reloadModule = new ReloadModule(configFileLoader, languageFileLoader, miniMessage);
 
+        // 注册命令
         new CoreCommand(languageFileLoader, miniMessage, commandUtil, helpModule);
         new HelpCommand(commandUtil, helpModule);
-        new ReloadCommand(commandUtil, reloadModule);
-        new ServerCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, serverListModule, serverInfoModule, configFileLoader, helpModule);
         new PluginCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, pluginListModule, pluginInfoModule, helpModule);
-
+        new ServerCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, serverListModule, serverInfoModule, configFileLoader, helpModule);
+        new ReloadCommand(commandUtil, reloadModule);
+        new VersionCommand(commandUtil, new VersionModule(languageFileLoader, miniMessage));
         commandUtil.registerAllCommands();
 
-        proxyServer.getEventManager().register(this, new PlayerActivityListener(proxyServer, configFileLoader, languageFileLoader, dataFileLoader, miniMessage, this, logger));
-
-        logger.info("V-Monitor initialization complete.");
+        logger.info("V-Monitor plugin enabled!");
     }
+
 
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
-        logger.info("V-Monitor is shutting down...");
+        // 在关服时执行数据保存操作，确保所有玩家数据和统计信息都已持久化
+        logger.info("V-Monitor plugin is shutting down. Saving player data...");
         if (dataFileLoader != null) {
             dataFileLoader.savePlayerData();
-        }
-        logger.info("V-Monitor shutdown complete.");
-    }
-
-    private boolean copyDefaultLanguageFiles(String resourcePathInJar, String fileType) {
-        Path targetFolder = dataDirectory.resolve(resourcePathInJar);
-        if (!Files.exists(targetFolder)) {
-            try {
-                Files.createDirectories(targetFolder);
-                logger.info("Created language directory: {}", targetFolder.toAbsolutePath());
-            } catch (IOException e) {
-                logger.error("Failed to create language directory '{}': {}", targetFolder.toAbsolutePath(), e.getMessage());
-                return false;
-            }
-        }
-
-        String[] langFiles = {"en-US.yml", "zh-CN.yml"};
-
-        boolean allCopied = true;
-        for (String langFile : langFiles) {
-            String resourcePath = resourcePathInJar + "/" + langFile;
-            Path targetPath = targetFolder.resolve(langFile);
-            // 修正：将 copyResource 改为 copyDefaultResource
-            if (!copyDefaultResource(resourcePath, langFile, "language file")) {
-                allCopied = false;
-            }
-        }
-        return allCopied;
-    }
-
-    private boolean copyDefaultResource(String resourcePathInJar, String fileName, String fileType) {
-        Path targetPath = dataDirectory.resolve(fileName);
-        if (!Files.exists(targetPath)) {
-            logger.info("Default {} ('{}') not found, trying to copy from JAR...", fileType, targetPath.getFileName());
-            try (InputStream in = getClass().getClassLoader().getResourceAsStream(resourcePathInJar)) {
-                if (in != null) {
-                    Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                    return true;
-                } else {
-                    logger.error("Default resource '{}' NOT FOUND in plugin JAR. This is unexpected. Please check plugin JAR integrity.", resourcePathInJar);
-                    return false;
-                }
-            } catch (IOException e) {
-                logger.error("Failed to copy default resource '{}' to '{}': {}", resourcePathInJar, targetPath.toAbsolutePath(), e.getMessage());
-                return false;
-            }
+            logger.info("Player data saved successfully.");
         } else {
-            logger.debug("{} '{}' already exists. Skipping initial copy.", fileType, targetPath.getFileName());
-            return true;
+            logger.warn("DataFileLoader was not initialized. Player data may not have been saved.");
         }
+        logger.info("V-Monitor plugin disabled.");
     }
 
+    // 提供一些公共访问器
     public ConfigFileLoader getConfigFileLoader() {
         return configFileLoader;
     }
