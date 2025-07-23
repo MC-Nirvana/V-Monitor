@@ -34,6 +34,7 @@ commands:
       <aqua>/vm server info [all|服务器名称]</aqua> <white>-</white> <green>获取所有或指定服务器的详细信息</green>
       <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加载插件</green>
       <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>获取所有或指定插件的详细信息</green>
+      <aqua>/vm player info [玩家游戏ID]</aqua> <white>-</white> <green>获取指定玩家的详细信息</green>
 
     server_format: |
       
@@ -46,6 +47,11 @@ commands:
       <gold><bold>V-Monitor - 帮助</bold></gold>
       <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加载插件</green>
       <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>获取所有或指定插件的详细信息</green>
+
+    player_format: |
+
+      <gold><bold>V-Monitor - 帮助</bold></gold>
+      <aqua>/vm player info [玩家游戏ID]</aqua> <white>-</white> <green>获取指定玩家的详细信息</green>
 
   server:
     not_found: "<red>服务器 {server} 不存在</red>"
@@ -158,3 +164,27 @@ commands:
         <gold>网址:</gold> <blue><click:open_url:{url}>{url}</click></blue>
         <gold>描述:</gold> <gray>{description}</gray>
         <gold>作者:</gold> <gray>{authors}</gray>
+
+  player:
+    not_found: "<red>数据库中未找到玩家 {player}</red>"
+
+    usage:
+      info: "<gold>请使用: <white>/vm player info <玩家名></white></gold>"
+
+    info:
+      server_stats_header: "<gold><bold>--- 服务器登录统计 ---</bold></gold>"
+      server_stat_line: "<gold>{server}:</gold> <gray>{count} 次</gray>"
+      no_server_stats: "<gray>暂无服务器登录记录</gray>"
+      never_quit: "从未退出"
+      format: |
+
+        <gold>--- <yellow>玩家信息: {player_name}</yellow> <gold>---</gold>
+        <gold>玩家名:</gold> <gray>{player_name}</gray>
+        <gold>UUID:</gold> <gray>{uuid}</gray>
+        <gold>首次加入时间:</gold> <gray>{first_join_time}</gray>
+        <gold>最后登录时间:</gold> <gray>{last_login_time}</gray>
+        <gold>最后退出时间:</gold> <gray>{last_quit_time}</gray>
+        <gold>总登录次数:</gold> <gray>{total_login_count}</gray>
+        <gold>总游戏时长:</gold> <gray>{total_play_time}</gray>
+
+        {server_stats}

@@ -186,6 +186,7 @@ public class VMonitor {
 
         // 初始化模块
         HelpModule helpModule = new HelpModule(languageFileLoader, miniMessage);
+        PlayerInfoModule playerInfoModule = new PlayerInfoModule(dataFileLoader, languageFileLoader, miniMessage);
         PluginListModule pluginListModule = new PluginListModule(proxyServer, languageFileLoader, miniMessage);
         PluginInfoModule pluginInfoModule = new PluginInfoModule(proxyServer, languageFileLoader, miniMessage);
         ServerListModule serverListModule = new ServerListModule(proxyServer, configFileLoader, languageFileLoader, miniMessage);
@@ -195,6 +196,7 @@ public class VMonitor {
         // 注册命令
         new CoreCommand(languageFileLoader, miniMessage, commandUtil, helpModule);
         new HelpCommand(commandUtil, helpModule);
+        new PlayerCommand(commandUtil, languageFileLoader, miniMessage, playerInfoModule, helpModule, dataFileLoader);
         new PluginCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, pluginListModule, pluginInfoModule, helpModule);
         new ServerCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, serverListModule, serverInfoModule, configFileLoader, helpModule, this);
         new ReloadCommand(commandUtil, reloadModule);

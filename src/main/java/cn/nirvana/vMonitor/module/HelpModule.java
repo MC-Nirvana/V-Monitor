@@ -53,4 +53,17 @@ public class HelpModule {
              source.sendMessage(miniMessage.deserialize("<red>No server help message configured or key 'commands.help.server_format' is missing in the language file.</red>"));
          }
     }
+
+    /**
+     * 显示player命令的帮助信息。
+     * @param source 命令发送者
+     */
+    public void executePlayerHelp(CommandSource source) {
+        String helpMessage = languageFileLoader.getMessage("commands.help.player_format");
+        if (helpMessage != null && !helpMessage.isEmpty() && !helpMessage.startsWith("<red>Missing Language Key:")) {
+            source.sendMessage(miniMessage.deserialize(helpMessage));
+        } else {
+            source.sendMessage(miniMessage.deserialize("<red>No player help message configured or key 'commands.help.player_format' is missing in the language file.</red>"));
+        }
+    }
 }

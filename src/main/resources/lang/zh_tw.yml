@@ -27,13 +27,14 @@ commands:
     all_format: |
       
       <gold><bold>V-Monitor - 幫助</bold></gold>
-      <aqua>/vm help</aqua> <white>-</white> <green>獲取插件總幫助信息</green>
+      <aqua>/vm help</aqua> <white>-</white> <green>獲取插件總幫助</green>
       <aqua>/vm reload</aqua> <white>-</white> <green>重載插件配置</green>
       <aqua>/vm version</aqua> <white>-</white> <green>獲取插件版本信息</green>
       <aqua>/vm server list [all|伺服器名稱]</aqua> <white>-</white> <green>列出所有或指定伺服器上的玩家</green>
       <aqua>/vm server info [all|伺服器名稱]</aqua> <white>-</white> <green>獲取所有或指定伺服器的詳細信息</green>
       <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加載插件</green>
       <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>獲取所有或指定插件的詳細信息</green>
+      <aqua>/vm player info [玩家遊戲ID]</aqua> <white>-</white> <green>獲取指定玩家的詳細信息</green>
 
     server_format: |
       
@@ -46,6 +47,11 @@ commands:
       <gold><bold>V-Monitor - 幫助</bold></gold>
       <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加載插件</green>
       <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>獲取所有或指定插件的詳細信息</green>
+
+    player_format: |
+    
+      <gold><bold>V-Monitor - 幫助</bold></gold>
+      <aqua>/vm player info [玩家遊戲ID]</aqua> <white>-</white> <green>獲取指定玩家的詳細信息</green>
 
   server:
     not_found: "<red>伺服器 {server} 不存在</red>"
@@ -159,3 +165,27 @@ commands:
         <gold>網址:</gold> <blue><click:open_url:{url}>{url}</click></blue>
         <gold>描述:</gold> <gray>{description}</gray>
         <gold>作者:</gold> <gray>{authors}</gray>
+
+  player:
+    not_found: "<red>數據庫中未找到玩家 {player}</red>"
+
+    usage:
+      info: "<gold>請使用: <white>/vm player info <玩家名></white></gold>"
+
+    info:
+      server_stats_header: "<gold><bold>--- 伺服器登錄統計 ---</bold></gold>"
+      server_stat_line: "<gold>{server}:</gold> <gray>{count} 次</gray>"
+      no_server_stats: "<gray>暫無伺服器登錄記錄</gray>"
+      never_quit: "從未退出"
+      format: |
+      
+        <gold>--- <yellow>玩家信息: {player_name}</yellow> <gold>---</gold>
+        <gold>玩家名:</gold> <gray>{player_name}</gray>
+        <gold>UUID:</gold> <gray>{uuid}</gray>
+        <gold>首次加入時間:</gold> <gray>{first_join_time}</gray>
+        <gold>最後登錄時間:</gold> <gray>{last_login_time}</gray>
+        <gold>最後退出時間:</gold> <gray>{last_quit_time}</gray>
+        <gold>總登錄次數:</gold> <gray>{total_login_count}</gray>
+        <gold>總遊戲時長:</gold> <gray>{total_play_time}</gray>
+      
+        {server_stats}
