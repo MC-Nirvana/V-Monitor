@@ -65,9 +65,21 @@ public class PlayerActivityListener {
 
         playerLoginTimes.put(uuid, LocalDateTime.now()); // 记录登录时间
 
+        // 检查是否为首次登录
+        boolean isFirstLogin = dataFileLoader.getRootData().players.get(uuid) == null;
+
+        // 先更新数据
         dataFileLoader.updatePlayerOnLogin(uuid, playerName);
-        sendPlayerActivityMessage(playerName, "player_activity.login", null, null);
+
+        // 根据是否首次登录发送不同消息
+        String messageKey = isFirstLogin ? "player_activity.first_join" : "player_activity.join";
+
+        // 添加500ms延迟后发送消息
+        plugin.getProxyServer().getScheduler().buildTask(plugin, () -> {
+            sendPlayerActivityMessage(playerName, messageKey, null, null);
+        }).delay(500, TimeUnit.MILLISECONDS).schedule();
     }
+
 
     /**
      * 当玩家连接到服务器时更新数据（例如，记录服务器登录次数）。
@@ -117,9 +129,11 @@ public class PlayerActivityListener {
 
         dataFileLoader.updatePlayerOnQuit(uuid, playerName, disconnectedServerName, sessionDuration);
 
-        // 使用配置的显示名称来发送消息
+        // 使用配置的显示名称来发送消息，并添加500ms延迟
         String displayServerName = disconnectedServerName != null ? configFileLoader.getServerDisplayName(disconnectedServerName) : null;
-        sendPlayerActivityMessage(playerName, "player_activity.quit", displayServerName, null);
+        plugin.getProxyServer().getScheduler().buildTask(plugin, () -> {
+            sendPlayerActivityMessage(playerName, "player_activity.quit", displayServerName, null);
+        }).delay(500, TimeUnit.MILLISECONDS).schedule();
     }
 
     /**
@@ -150,6 +164,6 @@ public class PlayerActivityListener {
                 logger.warn("Language key '{}' is missing or malformed for player activity message. " +
                         "Check your language files. Message won't be sent.", messageKey);
             }
-        }).delay(500, TimeUnit.MILLISECONDS).schedule(); // 延迟发送以避免立即发送可能导致的聊天刷屏
+        }).schedule(); // 移除了原有的延迟，因为已经在调用处添加了延迟
     }
 }

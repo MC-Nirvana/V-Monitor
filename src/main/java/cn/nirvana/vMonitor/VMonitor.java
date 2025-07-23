@@ -200,6 +200,9 @@ public class VMonitor {
         new VersionCommand(commandUtil, new VersionModule(languageFileLoader, miniMessage));
         commandUtil.registerAllCommands();
 
+        // 保存数据文件
+        dataFileLoader.savePlayerData();
+
         logger.info("V-Monitor plugin enabled!");
     }
 
