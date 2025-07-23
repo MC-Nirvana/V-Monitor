@@ -1,7 +1,9 @@
 package cn.nirvana.vMonitor.module;
 
+import cn.nirvana.vMonitor.VMonitor;
 import cn.nirvana.vMonitor.loader.ConfigFileLoader;
 import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.util.TimeUtil;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -21,12 +23,14 @@ public class ServerInfoModule {
     private final LanguageFileLoader languageFileLoader;
     private final MiniMessage miniMessage;
     private final ConfigFileLoader configFileLoader;
+    private final VMonitor plugin;
 
-    public ServerInfoModule(ProxyServer proxyServer, LanguageFileLoader languageFileLoader, MiniMessage miniMessage, ConfigFileLoader configFileLoader) {
+    public ServerInfoModule(ProxyServer proxyServer, LanguageFileLoader languageFileLoader, MiniMessage miniMessage, ConfigFileLoader configFileLoader, VMonitor plugin) {
         this.proxyServer = proxyServer;
         this.languageFileLoader = languageFileLoader;
         this.miniMessage = miniMessage;
         this.configFileLoader = configFileLoader;
+        this.plugin = plugin;
     }
 
     public void executeInfoSingleServer(CommandSource source, String serverNameArg) {
@@ -122,13 +126,41 @@ public class ServerInfoModule {
         CompletableFuture.allOf(futures)
                 .thenRun(() -> {
                     String proxyVersion = proxyServer.getVersion().getVersion();
+
+                    // 获取开服时间和运行时间
+                    String serverStartTime = "Unknown";
+                    String serverUptime = languageFileLoader.getMessage("global.unknown_info");
+
+                    try {
+                        // 从DataFileLoader获取开服时间
+                        String bootTime = plugin.getPlayerDataLoader().getRootData().server.bootTime;
+                        if (bootTime != null && !bootTime.isEmpty()) {
+                            serverStartTime = bootTime;
+
+                            // 使用TimeUtil计算运行时间
+                            long uptimeDays = TimeUtil.UptimeCalculator.calculateUptimeDays(bootTime);
+                            if (uptimeDays <= 0) {
+                                serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_same_day");
+                            } else {
+                                serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_days")
+                                        .replace("{days}", String.valueOf(uptimeDays));
+                            }
+                        }
+                    } catch (Exception e) {
+                        // 如果出现任何异常，使用默认值
+                        serverStartTime = languageFileLoader.getMessage("global.unknown_info");
+                        serverUptime = languageFileLoader.getMessage("global.unknown_info");
+                    }
+
                     String allFormat = languageFileLoader.getMessage("commands.server.info.all_format")
                             .replace("{proxy_version}", proxyVersion)
                             .replace("{total_player}", String.valueOf(totalOnlinePlayers.get()))
                             .replace("{server_count}", String.valueOf(servers.size()))
                             .replace("{online_servers}", String.valueOf(runningServersCount.get()))
                             .replace("{offline_servers}", String.valueOf(offlineServersCount.get()))
-                            .replace("{server_status_list}", serverStatusList.toString().trim());
+                            .replace("{server_status_list}", serverStatusList.toString().trim())
+                            .replace("{server_start_time}", serverStartTime)
+                            .replace("{server_uptime}", serverUptime);
                     source.sendMessage(miniMessage.deserialize(allFormat));
                 });
     }

@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 public class TimeUtil {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -119,6 +120,47 @@ public class TimeUtil {
             } catch (Exception e) {
                 System.err.println("Error parsing date time string '" + dateTimeStr + "': " + e.getMessage());
                 return 0L;
+            }
+        }
+    }
+
+    /**
+     * 服务器运行时间计算工具类
+     */
+    public static class UptimeCalculator {
+        /**
+         * 根据开服时间和当前时间计算服务器已运行的天数
+         *
+         * @param bootTime 开服时间字符串 (yyyy-MM-dd格式)
+         * @return 运行天数
+         */
+        public static long calculateUptimeDays(String bootTime) {
+            if (bootTime == null || bootTime.isEmpty()) {
+                return 0;
+            }
+
+            try {
+                long bootTimestamp = DateConverter.toTimestamp(bootTime);
+                long currentTimestamp = SystemTime.getCurrentTimestamp();
+
+                // 如果当前时间早于开服时间，则返回0
+                if (currentTimestamp < bootTimestamp) {
+                    return 0;
+                }
+
+                LocalDateTime bootDateTime = LocalDateTime.ofInstant(
+                        Instant.ofEpochSecond(bootTimestamp),
+                        ZoneId.systemDefault()
+                );
+                LocalDateTime currentDateTime = LocalDateTime.ofInstant(
+                        Instant.ofEpochSecond(currentTimestamp),
+                        ZoneId.systemDefault()
+                );
+
+                return ChronoUnit.DAYS.between(bootDateTime, currentDateTime);
+            } catch (Exception e) {
+                System.err.println("Error calculating uptime: " + e.getMessage());
+                return 0;
             }
         }
     }

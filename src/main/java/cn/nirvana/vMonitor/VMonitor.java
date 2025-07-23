@@ -184,18 +184,19 @@ public class VMonitor {
         // 初始化并注册命令
         CommandUtil commandUtil = new CommandUtil(proxyServer.getCommandManager(), logger, pluginContainer);
 
+        // 初始化模块
         HelpModule helpModule = new HelpModule(languageFileLoader, miniMessage);
         PluginListModule pluginListModule = new PluginListModule(proxyServer, languageFileLoader, miniMessage);
         PluginInfoModule pluginInfoModule = new PluginInfoModule(proxyServer, languageFileLoader, miniMessage);
         ServerListModule serverListModule = new ServerListModule(proxyServer, configFileLoader, languageFileLoader, miniMessage);
-        ServerInfoModule serverInfoModule = new ServerInfoModule(proxyServer, languageFileLoader, miniMessage, configFileLoader);
+        ServerInfoModule serverInfoModule = new ServerInfoModule(proxyServer, languageFileLoader, miniMessage, configFileLoader, this);
         ReloadModule reloadModule = new ReloadModule(configFileLoader, languageFileLoader, miniMessage);
 
         // 注册命令
         new CoreCommand(languageFileLoader, miniMessage, commandUtil, helpModule);
         new HelpCommand(commandUtil, helpModule);
         new PluginCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, pluginListModule, pluginInfoModule, helpModule);
-        new ServerCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, serverListModule, serverInfoModule, configFileLoader, helpModule);
+        new ServerCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, serverListModule, serverInfoModule, configFileLoader, helpModule, this);
         new ReloadCommand(commandUtil, reloadModule);
         new VersionCommand(commandUtil, new VersionModule(languageFileLoader, miniMessage));
         commandUtil.registerAllCommands();

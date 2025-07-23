@@ -62,16 +62,16 @@ public class ConfigFileLoader {
 
     private void loadServerDisplayNames() {
         serverDisplayNames.clear(); // 清空旧数据
-        Map<String, Object> serversSection = getTable("servers");
-        if (serversSection != null) {
-            for (Map.Entry<String, Object> entry : serversSection.entrySet()) {
+        Map<String, Object> aliasesSection = getTable("server-aliases");
+        if (aliasesSection != null) {
+            for (Map.Entry<String, Object> entry : aliasesSection.entrySet()) {
                 String serverKey = entry.getKey();
-                Object serverValue = entry.getValue();
-                if (serverValue instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> serverProps = (Map<String, Object>) serverValue;
-                    String displayName = (String) serverProps.get("display_name");
-                    if (displayName != null && !displayName.isEmpty()) {
+                Object displayNameValue = entry.getValue();
+
+                // 直接使用值作为显示名称，因为配置格式是 key: "value"
+                if (displayNameValue instanceof String) {
+                    String displayName = (String) displayNameValue;
+                    if (!displayName.isEmpty()) {
                         serverDisplayNames.put(serverKey, displayName);
                     }
                 }
@@ -79,6 +79,7 @@ public class ConfigFileLoader {
         }
         logger.debug("Loaded server display names: {}", serverDisplayNames);
     }
+
 
     private Object getNestedValue(String key) {
         String[] parts = key.split("\\.");

@@ -17,6 +17,7 @@ player_activity:
 commands:
   version:
     format: |
+      
       <gold><bold>V-Monitor - V-監視器</bold></gold>
       <aqua>作者</aqua> <white>-</white> <green>MC-Nirvana</green>
       <aqua>版本</aqua> <white>-</white> <green>1.3.0</green>
@@ -24,6 +25,7 @@ commands:
 
   help:
     all_format: |
+      
       <gold><bold>V-Monitor - 幫助</bold></gold>
       <aqua>/vm help</aqua> <white>-</white> <green>獲取插件總幫助信息</green>
       <aqua>/vm reload</aqua> <white>-</white> <green>重載插件配置</green>
@@ -34,11 +36,13 @@ commands:
       <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>獲取所有或指定插件的詳細信息</green>
 
     server_format: |
+      
       <gold><bold>V-Monitor - 幫助</bold></gold>
       <aqua>/vm server list [all|伺服器名稱]</aqua> <white>-</white> <green>列出所有或指定伺服器上的玩家</green>
       <aqua>/vm server info [all|伺服器名稱]</aqua> <white>-</white> <green>獲取所有或指定伺服器的詳細信息</green>
 
     plugin_format: |
+      
       <gold><bold>V-Monitor - 幫助</bold></gold>
       <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加載插件</green>
       <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>獲取所有或指定插件的詳細信息</green>
@@ -55,15 +59,18 @@ commands:
       no_players: "<gray>此伺服器暫無玩家在線</gray>"
       no_servers: "<red>未找到任何伺服器</red>"
       all_format: |
+        
         <gold>--- <yellow>全服在線玩家列表</yellow> <gold>---
         <gold>全服共計有</gold> <aqua>{online_players_count}</aqua> <gold>名玩家在線</gold>
         {all_players_list}
 
       all_line_format: |
+        
         伺服器 <yellow>{server_display_name}</yellow> 的在線玩家列表 (<green>當前在線：{online_players}人</green>):
         {players_list}
 
       specific_format: |
+        
         <gold>--- <yellow>伺服器 {server_display_name} 上的在線玩家列表</yellow> <gold>---
         <gold>伺服器</gold> <yellow>{server_display_name}</yellow> <gold>共計有</gold> <aqua>{online_players_number}</aqua> <gold>名玩家在線</gold>
         {specific_players_list}
@@ -76,12 +83,17 @@ commands:
       no_servers: "<red>未找到任何伺服器</red>"
       no_version: "<red>未知版本</red>"
       no_motd: "<gray>無MOTD</gray>"
+      uptime_same_day: "不到1天"
+      uptime_days: "{days}天"
       server_status_list_format: "<gold>{server_name}</gold> <gray>[{server_display_name}]</gray>: {status}（當前在線玩家情況: {online_players}）"
-      all_format: |
+      all_format: |        
+        
         <gold>--- <yellow>Velocity 實例概覽</yellow> <gold>---
         <yellow>核心版本:</yellow> <green>{proxy_version}</green>
         <yellow>總計在線人數:</yellow> <blue>{total_player}</blue>人
         <yellow>伺服器數量:</yellow> <green>{server_count}</green>台
+        <yellow>開服時間:</yellow> <green>{server_start_time}</green>
+        <yellow>已運行時間:</yellow> <green>{server_uptime}</green>
 
         <gold><bold>--- 伺服器運行狀態概覽 ---</bold></gold>
         <yellow>- 在線伺服器:</yellow> <green>{online_servers}</green>台
@@ -91,6 +103,7 @@ commands:
         {server_status_list}
 
       specific_format: |
+        
         <gold>--- <yellow>伺服器 {server_name} 詳細信息</yellow> <gold>---
         <gold>名稱:</gold> <gray>{server_name}</gray>
         <gold>別名:</gold> <aqua>{server_display_name}</aqua>
@@ -114,10 +127,12 @@ commands:
       no_authors: "<gray>未列出作者</gray>"
       plugin_line: "<gold>插件名稱：{plugin_name}</gold> <white>-</white> <gray>版本號：{plugin_version}</gray>"
       format: |
+        
         <gold>--- <yellow>已加載插件 ({count})</yellow> <gold>---
         {plugin_list}
 
       hover_format: |
+        
         <gold>ID:</gold> <gray>{id}</gray>
         <gold>名稱:</gold> <gray>{name}</gray>
         <gold>版本:</gold> <gray>{version}</gray>
@@ -131,10 +146,12 @@ commands:
       no_description: "<gray>未提供描述</gray>"
       no_authors: "<gray>未列出作者</gray>"
       all_header: |
+        
         <gold>--- <yellow>所有插件信息</yellow> <gold>---
         {plugin_list}
 
       format: |
+        
         <gold>--- <yellow>插件信息: {name}</yellow> <gold>---
         <gold>ID:</gold> <gray>{id}</gray>
         <gold>名稱:</gold> <gray>{name}</gray>

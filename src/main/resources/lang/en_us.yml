@@ -17,6 +17,7 @@ player_activity:
 commands:
   version:
     format: |
+      
       <gold><bold>V-Monitor</bold></gold>
       <aqua>Author</aqua> <white>-</white> <green>MC-Nirvana</green>
       <aqua>Version</aqua> <white>-</white> <green>1.3.0</green>
@@ -24,6 +25,7 @@ commands:
 
   help:
     all_format: |
+      
       <gold><bold>V-Monitor - Help</bold></gold>
       <aqua>/vm help</aqua> <white>-</white> <green>Get general help information</green>
       <aqua>/vm reload</aqua> <white>-</white> <green>Reload plugin configuration</green>
@@ -34,11 +36,13 @@ commands:
       <aqua>/vm plugin info [all|plugin ID]</aqua> <white>-</white> <green>Get details about a plugin or all plugins</green>
 
     server_format: |
+      
       <gold><bold>V-Monitor - Help</bold></gold>
       <aqua>/vm server list [all|server name]</aqua> <white>-</white> <green>List all players on a server or across all servers</green>
       <aqua>/vm server info [all|server name]</aqua> <white>-</white> <green>Get information about a server or all servers</green>
 
     plugin_format: |
+      
       <gold><bold>V-Monitor - Help</bold></gold>
       <aqua>/vm plugin list</aqua> <white>-</white> <green>List all loaded plugins</green>
       <aqua>/vm plugin info [all|plugin ID]</aqua> <white>-</white> <green>Get details about a plugin or all plugins</green>
@@ -55,15 +59,18 @@ commands:
       no_players: "<gray>No players online on this server</gray>"
       no_servers: "<red>No servers found</red>"
       all_format: |
+        
         <gold>--- <yellow>All Online Players</yellow> <gold>---
         <gold>Total players online:</gold> <aqua>{online_players_count}</aqua>
         {all_players_list}
 
       all_line_format: |
+        
         Online players on server <yellow>{server_display_name}</yellow> (<green>Currently online: {online_players} players</green>):
         {players_list}
 
       specific_format: |
+        
         <gold>--- <yellow>Online players on {server_display_name}</yellow> <gold>---
         <gold>Server</gold> <yellow>{server_display_name}</yellow> <gold>has</gold> <aqua>{online_players_number}</aqua> <gold>players online</gold>
         {specific_players_list}
@@ -76,12 +83,17 @@ commands:
       no_servers: "<red>No servers found</red>"
       no_version: "<red>Unknown version</red>"
       no_motd: "<gray>No MOTD</gray>"
+      uptime_same_day: "Less than a day"
+      uptime_days: "{days} days"
       server_status_list_format: "<gold>{server_name}</gold> <gray>[{server_display_name}]</gray>: {status} (Current player count: {online_players})"
-      all_format: |
+      all_format: |  
+        
         <gold>--- <yellow>Velocity Instance Overview</yellow> <gold>---
         <yellow>Core version:</yellow> <green>{proxy_version}</green>
         <yellow>Total players online:</yellow> <blue>{total_player}</blue>
         <yellow>Server count:</yellow> <green>{server_count}</green>
+        <yellow>Server start time:</yellow> <green>{server_start_time}</green>
+        <yellow>Server uptime:</yellow> <green>{server_uptime}</green>
 
         <gold><bold>--- Server Status Overview ---</bold></gold>
         <yellow>- Online servers:</yellow> <green>{online_servers}</green>
@@ -91,6 +103,7 @@ commands:
         {server_status_list}
 
       specific_format: |
+        
         <gold>--- <yellow>Server {server_name} Details</yellow> <gold>---
         <gold>Name:</gold> <gray>{server_name}</gray>
         <gold>Display name:</gold> <aqua>{server_display_name}</aqua>
@@ -114,10 +127,12 @@ commands:
       no_authors: "<gray>No authors listed</gray>"
       plugin_line: "<gold>Plugin name: {plugin_name}</gold> <white>-</white> <gray>Version: {plugin_version}</gray>"
       format: |
+        
         <gold>--- <yellow>Loaded Plugins ({count})</yellow> <gold>---
         {plugin_list}
 
       hover_format: |
+        
         <gold>ID:</gold> <gray>{id}</gray>
         <gold>Name:</gold> <gray>{name}</gray>
         <gold>Version:</gold> <gray>{version}</gray>
@@ -131,10 +146,12 @@ commands:
       no_description: "<gray>No description provided</gray>"
       no_authors: "<gray>No authors listed</gray>"
       all_header: |
+        
         <gold>--- <yellow>All Plugin Info</yellow> <gold>---
         {plugin_list}
 
       format: |
+        
         <gold>--- <yellow>Plugin Info: {name}</yellow> <gold>---
         <gold>ID:</gold> <gray>{id}</gray>
         <gold>Name:</gold> <gray>{name}</gray>

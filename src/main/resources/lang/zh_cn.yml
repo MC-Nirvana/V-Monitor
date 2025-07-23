@@ -82,6 +82,8 @@ commands:
       no_servers: "<red>未找到任何服务器</red>"
       no_version: "<red>未知版本</red>"
       no_motd: "<gray>无MOTD</gray>"
+      uptime_same_day: "不到1天"
+      uptime_days: "{days}天"
       server_status_list_format: "<gold>{server_name}</gold> <gray>[{server_display_name}]</gray>: {status}（当前在线玩家情况: {online_players}）"
       all_format: |
         
@@ -89,6 +91,8 @@ commands:
         <yellow>核心版本:</yellow> <green>{proxy_version}</green>
         <yellow>总计在线人数:</yellow> <blue>{total_player}</blue>人
         <yellow>服务器数量:</yellow> <green>{server_count}</green>台
+        <yellow>开服时间:</yellow> <green>{server_start_time}</green>
+        <yellow>已运行时间:</yellow> <green>{server_uptime}</green>
 
         <gold><bold>--- 服务器运行状态概览 ---</bold></gold>
         <yellow>- 在线服务器:</yellow> <green>{online_servers}</green>台

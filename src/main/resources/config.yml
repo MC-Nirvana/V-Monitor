@@ -12,6 +12,6 @@ language:
 # Format: actual_server_name: "alias"
 # Example: 'hub' will be an alias for the server named 'lobby'
 # server-aliases:
-#   - lobby: "hub"
-#   - server2: "creative"
+#   lobby: "hub"
+#   server2: "creative"
 server-aliases: []

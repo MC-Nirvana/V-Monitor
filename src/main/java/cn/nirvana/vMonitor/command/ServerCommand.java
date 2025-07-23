@@ -1,5 +1,6 @@
 package cn.nirvana.vMonitor.command;
 
+import cn.nirvana.vMonitor.VMonitor;
 import cn.nirvana.vMonitor.loader.ConfigFileLoader;
 import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 import cn.nirvana.vMonitor.module.ServerInfoModule;
@@ -38,7 +39,8 @@ public class ServerCommand {
     public ServerCommand(CommandUtil commandUtil, ProxyServer proxyServer,
                          LanguageFileLoader languageFileLoader, MiniMessage miniMessage,
                          ServerListModule serverListModule, ServerInfoModule serverInfoModule,
-                         ConfigFileLoader configFileLoader, HelpModule helpModule) {
+                         ConfigFileLoader configFileLoader, HelpModule helpModule,
+                         VMonitor plugin) { // 添加 VMonitor 参数
         this.commandUtil = commandUtil;
         this.proxyServer = proxyServer;
         this.languageFileLoader = languageFileLoader;
