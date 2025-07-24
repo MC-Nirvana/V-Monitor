@@ -3,10 +3,10 @@ package cn.nirvana.vMonitor.command;
 import cn.nirvana.vMonitor.VMonitor;
 import cn.nirvana.vMonitor.loader.ConfigFileLoader;
 import cn.nirvana.vMonitor.loader.LanguageFileLoader;
-import cn.nirvana.vMonitor.module.ServerInfoModule;
-import cn.nirvana.vMonitor.module.ServerListModule;
+import cn.nirvana.vMonitor.command_module.ServerInfoModule;
+import cn.nirvana.vMonitor.command_module.ServerListModule;
 import cn.nirvana.vMonitor.util.CommandUtil;
-import cn.nirvana.vMonitor.module.HelpModule;
+import cn.nirvana.vMonitor.command_module.HelpModule;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -14,7 +14,6 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.ProxyServer;

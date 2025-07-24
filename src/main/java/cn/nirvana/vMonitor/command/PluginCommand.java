@@ -1,10 +1,10 @@
 package cn.nirvana.vMonitor.command;
 
 import cn.nirvana.vMonitor.loader.LanguageFileLoader;
-import cn.nirvana.vMonitor.module.PluginInfoModule;
-import cn.nirvana.vMonitor.module.PluginListModule;
+import cn.nirvana.vMonitor.command_module.PluginInfoModule;
+import cn.nirvana.vMonitor.command_module.PluginListModule;
 import cn.nirvana.vMonitor.util.CommandUtil;
-import cn.nirvana.vMonitor.module.HelpModule;
+import cn.nirvana.vMonitor.command_module.HelpModule;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -12,7 +12,6 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -20,7 +19,6 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;

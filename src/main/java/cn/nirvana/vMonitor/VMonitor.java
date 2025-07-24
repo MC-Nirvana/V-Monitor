@@ -3,7 +3,7 @@ package cn.nirvana.vMonitor;
 import cn.nirvana.vMonitor.command.*;
 import cn.nirvana.vMonitor.loader.*;
 import cn.nirvana.vMonitor.listener.PlayerActivityListener;
-import cn.nirvana.vMonitor.module.*; // 导入所有新的模块类
+import cn.nirvana.vMonitor.command_module.*; // 导入所有新的模块类
 import cn.nirvana.vMonitor.util.CommandUtil; // 导入 CommandUtil
 import cn.nirvana.vMonitor.util.FileUtil; // 导入 FileUtil
 import cn.nirvana.vMonitor.exceptions.FileException; // 导入 FileException
@@ -23,17 +23,9 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-
-import java.util.Set;
 
 @Plugin(
         id = "v-monitor",
@@ -184,7 +176,7 @@ public class VMonitor {
         // 初始化并注册命令
         CommandUtil commandUtil = new CommandUtil(proxyServer.getCommandManager(), logger, pluginContainer);
 
-        // 初始化模块
+        // 初始化命令模块
         HelpModule helpModule = new HelpModule(languageFileLoader, miniMessage);
         PlayerInfoModule playerInfoModule = new PlayerInfoModule(dataFileLoader, languageFileLoader, miniMessage);
         PluginListModule pluginListModule = new PluginListModule(proxyServer, languageFileLoader, miniMessage);

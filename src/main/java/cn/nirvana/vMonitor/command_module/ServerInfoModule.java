@@ -1,4 +1,4 @@
-package cn.nirvana.vMonitor.module;
+package cn.nirvana.vMonitor.command_module;
 
 import cn.nirvana.vMonitor.VMonitor;
 import cn.nirvana.vMonitor.loader.ConfigFileLoader;

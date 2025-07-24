@@ -1,4 +1,4 @@
-package cn.nirvana.vMonitor.module;
+package cn.nirvana.vMonitor.command_module;
 
 import cn.nirvana.vMonitor.loader.LanguageFileLoader;
 
@@ -6,7 +6,6 @@ import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.plugin.PluginContainer;
 import com.velocitypowered.api.plugin.PluginDescription; // 确保导入
 import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.plugin.PluginManager; // 导入 PluginManager
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;

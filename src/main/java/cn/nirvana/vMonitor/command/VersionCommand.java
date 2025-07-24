@@ -1,6 +1,6 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.module.VersionModule;
+import cn.nirvana.vMonitor.command_module.VersionModule;
 import cn.nirvana.vMonitor.util.CommandUtil;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;

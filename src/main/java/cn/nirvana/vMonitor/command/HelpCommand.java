@@ -1,10 +1,9 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.module.HelpModule;
+import cn.nirvana.vMonitor.command_module.HelpModule;
 import cn.nirvana.vMonitor.util.CommandUtil;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import com.velocitypowered.api.command.CommandSource;
 
