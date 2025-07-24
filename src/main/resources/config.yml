@@ -1,17 +1,63 @@
-# V-Monitor Configuration
+# V-监视器配置文件（V-Monitor Configuration）
 
-# Default language（默认语言设置）
-# Current Supported Languages:
-# zh_cn (Simplified Chinese)
-# zh_tw (Traditional Chinese)
-# en_us (English)
+# 默认语言设置（Default language settings）
 language:
+  # 默认语言（Default language）
+  # 支持的语言（Support language）：zh_cn, zh_tw, en_us
   default: "zh_cn"
 
-# Server aliases (服务器名称别名设置)
-# Format: actual_server_name: "alias"
-# Example: 'hub' will be an alias for the server named 'lobby'
-# server-aliases:
-#   lobby: "hub"
-#   server2: "creative"
-server-aliases: []
+# 服务器信息设置（Server info settings）
+server-info:
+  # 服务器名称（Server name）
+  name: "My Velocity Server"
+  # 服务器别名（Server aliases）
+  # 参数格式为：实际服务器名称: "别名"（Parameter format: actual server name: "alias"）
+  # 支持为多个服务器同时设置别名（Supports setting aliases for multiple servers at the same time）
+  # 示例（Example）：
+  # aliases:
+  #   lobby: "hub"
+  #   game: "minigames"
+  aliases: []
+
+# 数据存储设置 (Data storage settings)
+data-storage:
+  # 数据库类型（Database type）
+  # 支持的类型（Supported types）：file, sqlite, mysql
+  type: "file"
+  file:
+    # 数据文件路径（Data file path）
+    path: "data.json"
+  sqlite:
+    # SQLite数据库文件路径（SQLite database file path）
+    path: "data.db"
+  mysql:
+    # MySQL数据库连接配置（MySQL connection configuration）
+    host: "localhost"
+    port: 3306
+    database: "v_monitor"
+    username: "root"
+    password: "password"
+    # MySQL自定义参数设置（MySQL custom parameter settings）
+    # 参数格式为：key: value （Parameter format: key: value）
+    # 示例（Example）：
+    # parameters:
+    #   useSSL: "false"
+    parameters: []
+
+# 报告设置 (Report settings)
+report:
+  # 是否启用报告功能（Enable report feature）
+  # 如果启用，报告将在指定时间自动生成（If enabled, reports will be generated automatically at the specified time）
+  enabled: true
+  # 是否自动清理玩家活跃数据（Auto clean player activity data）
+  auto-clean-data: true
+  # 是否自动清理报告（Auto clean report）
+  auto-clean-report: true
+  # 输出目录（Output directory）
+  output-directory: "Reports"
+  # 报告生成时间（Report generation time）
+  # 格式为 HH:mm（Format is HH:mm）
+  # 注意：时间应为24小时制（Note: Time should be in 24-hour format）
+  # 示例：每天下午4点生成报告（Generate report every day at 4 PM）
+  # schedule-time: "16:00"
+  schedule-time: "16:00"
