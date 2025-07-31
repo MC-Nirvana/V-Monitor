@@ -13,6 +13,9 @@ import com.velocitypowered.api.proxy.server.ServerPing;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -137,13 +140,36 @@ public class ServerInfoModule {
                         if (bootTime != null && !bootTime.isEmpty()) {
                             serverStartTime = bootTime;
 
-                            // 使用TimeUtil计算运行时间
-                            long uptimeDays = TimeUtil.UptimeCalculator.calculateUptimeDays(bootTime);
-                            if (uptimeDays <= 0) {
-                                serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_same_day");
-                            } else {
-                                serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_days")
-                                        .replace("{days}", String.valueOf(uptimeDays));
+                            // 直接使用 TimeUtil.DateConverter 来处理日期字符串
+                            try {
+                                long bootTimestamp = TimeUtil.DateConverter.toTimestamp(bootTime);
+                                long currentTimestamp = TimeUtil.SystemTime.getCurrentTimestamp();
+
+                                // 如果当前时间早于开服时间，则返回0
+                                if (currentTimestamp >= bootTimestamp) {
+                                    LocalDateTime bootDateTime = LocalDateTime.ofInstant(
+                                            Instant.ofEpochSecond(bootTimestamp),
+                                            ZoneId.systemDefault()
+                                    );
+                                    LocalDateTime currentDateTime = LocalDateTime.ofInstant(
+                                            Instant.ofEpochSecond(currentTimestamp),
+                                            ZoneId.systemDefault()
+                                    );
+
+                                    long uptimeDays = java.time.temporal.ChronoUnit.DAYS.between(bootDateTime, currentDateTime);
+
+                                    if (uptimeDays <= 0) {
+                                        serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_same_day");
+                                    } else {
+                                        serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_days")
+                                                .replace("{days}", String.valueOf(uptimeDays));
+                                    }
+                                } else {
+                                    serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_same_day");
+                                }
+                            } catch (Exception e) {
+                                // 如果计算运行时间出现异常，使用默认值
+                                serverUptime = languageFileLoader.getMessage("global.unknown_info");
                             }
                         }
                     } catch (Exception e) {
@@ -163,5 +189,6 @@ public class ServerInfoModule {
                             .replace("{server_uptime}", serverUptime);
                     source.sendMessage(miniMessage.deserialize(allFormat));
                 });
+
     }
 }
