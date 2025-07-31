@@ -35,6 +35,7 @@ commands:
       <aqua>/vm plugin list</aqua> <white>-</white> <green>List all loaded plugins</green>
       <aqua>/vm plugin info [all|plugin ID]</aqua> <white>-</white> <green>Get details about a plugin or all plugins</green>
       <aqua>/vm player info [player ID]</aqua> <white>-</white> <green>Query player activity information</green>
+      <aqua>/vm player switch [player ID]</aqua> <white>-</white> <green>Get server switch logs for a specific player</green>
       
 
     server_format: |
@@ -53,6 +54,7 @@ commands:
 
       <gold><bold>V-Monitor - Help</bold></gold>
       <aqua>/vm player info [player ID]</aqua> <white>-</white> <green>Get information about a specific player</green>
+      <aqua>/vm player switch [player ID]</aqua> <white>-</white> <green>Get server switch logs for a specific player</green>
 
   server:
     not_found: "<red>Server {server} does not exist</red>"
@@ -183,3 +185,11 @@ commands:
         <gold>First Join Time:</gold> <gray>{first_join_time}</gray>
         <gold>Last Login Time:</gold> <gray>{last_login_time}</gray>
         <gold>Total Play Time:</gold> <gray>{total_play_time}</gray>
+
+    switch:
+      no_logs: "<gray>No server switch logs found for this player.</gray>"
+      entry_format: "<gray>[{iso8601_time}]</gray> <white>{from}</white> <yellow>→</yellow> <white>{to}</white>"
+      format: |
+        
+        <gold>--- <yellow>Server Switch Logs for {player_name}</yellow> <gold>---</gold>
+        {switch_log}

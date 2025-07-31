@@ -35,6 +35,7 @@ commands:
       <aqua>/vm plugin list</aqua> <white>-</white> <green>列出所有已加载插件</green>
       <aqua>/vm plugin info [all|插件ID]</aqua> <white>-</white> <green>获取所有或指定插件的详细信息</green>
       <aqua>/vm player info [玩家游戏ID]</aqua> <white>-</white> <green>获取指定玩家的详细信息</green>
+      <aqua>/vm player switch [玩家游戏ID]</aqua> <white>-</white> <green>获取指定玩家的服务器切换日志</green>
 
     server_format: |
       
@@ -52,6 +53,7 @@ commands:
 
       <gold><bold>V-Monitor - 帮助</bold></gold>
       <aqua>/vm player info [玩家游戏ID]</aqua> <white>-</white> <green>获取指定玩家的详细信息</green>
+      <aqua>/vm player switch [玩家游戏ID]</aqua> <white>-</white> <green>获取指定玩家的服务器切换日志</green>
 
   server:
     not_found: "<red>服务器 {server} 不存在</red>"
@@ -170,6 +172,7 @@ commands:
 
     usage:
       info: "<gold>请使用: <white>/vm player info <玩家名></white></gold>"
+      switch: "<gold>请使用: <white>/vm player switch <玩家名></white></gold>"
 
     info:
       format: |
@@ -181,3 +184,11 @@ commands:
         <gold>首次加入时间:</gold> <gray>{first_join_time}</gray>
         <gold>最后登录时间:</gold> <gray>{last_login_time}</gray>
         <gold>总游戏时长:</gold> <gray>{total_play_time}</gray>
+
+    switch:
+      no_logs: "<gray>未找到该玩家的服务器切换日志。</gray>"
+      entry_format: "<gray>[{iso8601_time}]</gray> <white>{from}</white> <yellow>→</yellow> <white>{to}</white>"
+      format: |
+        
+        <gold>--- <yellow>玩家 {player_name} 的服务器切换日志</yellow> <gold>---</gold>
+        {switch_log}
