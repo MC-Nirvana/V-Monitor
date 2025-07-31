@@ -173,19 +173,12 @@ commands:
       info: "<gold>請使用: <white>/vm player info <玩家名></white></gold>"
 
     info:
-      server_stats_header: "<gold><bold>--- 伺服器登錄統計 ---</bold></gold>"
-      server_stat_line: "<gold>{server}:</gold> <gray>{count} 次</gray>"
-      no_server_stats: "<gray>暫無伺服器登錄記錄</gray>"
-      never_quit: "從未退出"
       format: |
       
         <gold>--- <yellow>玩家信息: {player_name}</yellow> <gold>---</gold>
-        <gold>玩家名:</gold> <gray>{player_name}</gray>
+        <gold>玩家編號:</gold> <gray>{player_id}</gray>
         <gold>UUID:</gold> <gray>{uuid}</gray>
+        <gold>玩家名:</gold> <gray>{player_name}</gray>
         <gold>首次加入時間:</gold> <gray>{first_join_time}</gray>
         <gold>最後登錄時間:</gold> <gray>{last_login_time}</gray>
-        <gold>最後退出時間:</gold> <gray>{last_quit_time}</gray>
-        <gold>總登錄次數:</gold> <gray>{total_login_count}</gray>
         <gold>總遊戲時長:</gold> <gray>{total_play_time}</gray>
-      
-        {server_stats}

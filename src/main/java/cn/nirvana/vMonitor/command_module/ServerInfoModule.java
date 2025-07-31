@@ -133,7 +133,7 @@ public class ServerInfoModule {
 
                     try {
                         // 从DataFileLoader获取开服时间
-                        String bootTime = plugin.getPlayerDataLoader().getRootData().server.bootTime;
+                        String bootTime = plugin.getPlayerDataLoader().getRootData().serverInfo.startupTime;
                         if (bootTime != null && !bootTime.isEmpty()) {
                             serverStartTime = bootTime;
 

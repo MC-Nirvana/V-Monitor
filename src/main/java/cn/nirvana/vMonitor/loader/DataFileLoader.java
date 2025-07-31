@@ -11,6 +11,7 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.JsonDeserializationContext;
@@ -37,6 +38,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.lang.reflect.Type;
+import java.util.List;
+import java.util.ArrayList;
 
 public class DataFileLoader {
     private final Logger logger;
@@ -51,8 +54,6 @@ public class DataFileLoader {
             .registerTypeAdapter(RootData.class, new RootDataSerializer())
             .registerTypeAdapter(RootData.class, new RootDataDeserializer())
             .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
-            .registerTypeAdapter(PlayerData.class, new PlayerDataSerializer())
-            .registerTypeAdapter(PlayerData.class, new PlayerDataDeserializer())
             .create();
 
     // 添加LocalDateTime的适配器
@@ -83,38 +84,86 @@ public class DataFileLoader {
         public JsonElement serialize(RootData src, Type typeOfSrc, JsonSerializationContext context) {
             JsonObject rootObject = new JsonObject();
 
-            // 序列化 server 部分
-            JsonObject serverObject = new JsonObject();
-            serverObject.addProperty("bootTime", src.server.bootTime);
-            serverObject.addProperty("lastReportGenerationDate", src.server.lastReportGenerationDate);
+            // 序列化 server_info 部分
+            JsonObject serverInfoObject = new JsonObject();
+            serverInfoObject.addProperty("startup_time", src.serverInfo.startupTime);
+            serverInfoObject.addProperty("last_report_generation_time", src.serverInfo.lastReportGenerationTime);
+            rootObject.add("server_info", serverInfoObject);
 
-            // newPlayersToday
-            serverObject.add("newPlayersToday", context.serialize(src.server.newPlayersToday));
+            // 序列化 server_tracking 部分
+            JsonObject serverTrackingObject = new JsonObject();
+            serverTrackingObject.addProperty("historical_peak_online", src.serverTracking.historicalPeakOnline);
 
-            // totalLoginCountsInDay
-            serverObject.add("totalLoginCountsInDay", context.serialize(src.server.totalLoginCountsInDay));
+            // daily_peak_online
+            JsonObject dailyPeakOnlineObject = new JsonObject();
+            for (Map.Entry<String, DailyPeakOnlineData> entry : src.serverTracking.dailyPeakOnline.entrySet()) {
+                JsonObject datePeakObject = new JsonObject();
+                datePeakObject.addProperty("overall", entry.getValue().overall);
 
-            // totalPlayTimesInDay - 转换为 HH:mm:ss 格式
-            JsonObject totalPlayTimesInDayObject = new JsonObject();
-            for (Map.Entry<String, Long> entry : src.server.totalPlayTimesInDay.entrySet()) {
-                totalPlayTimesInDayObject.addProperty(entry.getKey(), TimeUtil.TimePeriodConverter.fromSeconds(entry.getValue()));
+                // sub_server 应该是数组
+                JsonArray subServerArray = new JsonArray();
+                for (SubServerPeakData subServer : entry.getValue().subServer) {
+                    JsonObject subServerObject = new JsonObject();
+                    subServerObject.addProperty("server_name", subServer.serverName);
+                    subServerObject.addProperty("peak_online", subServer.peakOnline);
+                    subServerArray.add(subServerObject);
+                }
+                datePeakObject.add("sub_server", subServerArray);
+                dailyPeakOnlineObject.add(entry.getKey(), datePeakObject);
             }
-            serverObject.add("totalPlayTimesInDay", totalPlayTimesInDayObject);
+            serverTrackingObject.add("daily_peak_online", dailyPeakOnlineObject);
 
-            // totalServerLoginCounts
-            serverObject.add("totalServerLoginCounts", context.serialize(src.server.totalServerLoginCounts));
+            // daily_new_players
+            JsonObject dailyNewPlayersObject = new JsonObject();
+            for (Map.Entry<String, DailyNewPlayersData> entry : src.serverTracking.dailyNewPlayers.entrySet()) {
+                JsonObject dateNewPlayersObject = new JsonObject();
+                dateNewPlayersObject.addProperty("overall", entry.getValue().overall);
 
-            // dailyServerLoginCounts
-            serverObject.add("dailyServerLoginCounts", context.serialize(src.server.dailyServerLoginCounts));
-
-            rootObject.add("server", serverObject);
-
-            // 序列化 players 部分
-            JsonObject playersObject = new JsonObject();
-            for (Map.Entry<UUID, PlayerData> entry : src.players.entrySet()) {
-                playersObject.add(entry.getKey().toString(), context.serialize(entry.getValue()));
+                // players 应该是数组
+                JsonArray playersArray = new JsonArray();
+                for (NewPlayerData player : entry.getValue().players) {
+                    JsonObject playerObject = new JsonObject();
+                    playerObject.addProperty("uuid", player.uuid.toString());
+                    playerObject.addProperty("time", player.time);
+                    playersArray.add(playerObject);
+                }
+                dateNewPlayersObject.add("players", playersArray);
+                dailyNewPlayersObject.add(entry.getKey(), dateNewPlayersObject);
             }
-            rootObject.add("players", playersObject);
+            serverTrackingObject.add("daily_new_players", dailyNewPlayersObject);
+
+            rootObject.add("server_tracking", serverTrackingObject);
+
+            // 序列化 player_data 部分 (应该是一个数组而不是对象)
+            JsonArray playersArray = new JsonArray();
+            for (PlayerData player : src.playerData) {
+                JsonObject playerObject = new JsonObject();
+                playerObject.addProperty("id", player.id);
+                playerObject.addProperty("uuid", player.uuid.toString());
+                playerObject.addProperty("username", player.username);
+                playerObject.addProperty("first_join_time", player.firstJoinTime);
+                playerObject.addProperty("last_login_time", player.lastLoginTime);
+                playerObject.addProperty("play_time", TimeUtil.TimePeriodConverter.fromSeconds(player.playTime));
+
+                // daily_server_paths
+                JsonObject dailyServerPathsObject = new JsonObject();
+                for (Map.Entry<String, List<ServerPathData>> pathEntry : player.dailyServerPaths.entrySet()) {
+                    // 应该是数组
+                    JsonArray pathsArray = new JsonArray();
+                    for (ServerPathData path : pathEntry.getValue()) {
+                        JsonObject pathObject = new JsonObject();
+                        pathObject.addProperty("time", path.time);
+                        pathObject.addProperty("from", path.from);
+                        pathObject.addProperty("to", path.to);
+                        pathsArray.add(pathObject);
+                    }
+                    dailyServerPathsObject.add(pathEntry.getKey(), pathsArray);
+                }
+                playerObject.add("daily_server_paths", dailyServerPathsObject);
+
+                playersArray.add(playerObject);
+            }
+            rootObject.add("player_data", playersArray);
 
             return rootObject;
         }
@@ -127,52 +176,144 @@ public class DataFileLoader {
             RootData rootData = new RootData();
             JsonObject rootObject = json.getAsJsonObject();
 
-            if (rootObject.has("server")) {
-                JsonObject serverObject = rootObject.getAsJsonObject("server");
-                ServerData serverData = new ServerData();
+            // 解析 server_info
+            if (rootObject.has("server_info")) {
+                JsonObject serverInfoObject = rootObject.getAsJsonObject("server_info");
+                rootData.serverInfo = new ServerInfoData();
+                if (serverInfoObject.has("startup_time")) {
+                    rootData.serverInfo.startupTime = serverInfoObject.get("startup_time").getAsString();
+                }
+                if (serverInfoObject.has("last_report_generation_time")) {
+                    rootData.serverInfo.lastReportGenerationTime = serverInfoObject.get("last_report_generation_time").getAsString();
+                }
+            }
 
-                if (serverObject.has("bootTime")) {
-                    serverData.bootTime = serverObject.get("bootTime").getAsString();
+            // 解析 server_tracking
+            if (rootObject.has("server_tracking")) {
+                JsonObject serverTrackingObject = rootObject.getAsJsonObject("server_tracking");
+                rootData.serverTracking = new ServerTrackingData();
+
+                if (serverTrackingObject.has("historical_peak_online")) {
+                    rootData.serverTracking.historicalPeakOnline = serverTrackingObject.get("historical_peak_online").getAsInt();
                 }
 
-                if (serverObject.has("lastReportGenerationDate")) {
-                    serverData.lastReportGenerationDate = serverObject.get("lastReportGenerationDate").getAsString();
-                }
-
-                if (serverObject.has("newPlayersToday")) {
-                    serverData.newPlayersToday = context.deserialize(serverObject.get("newPlayersToday"), serverData.newPlayersToday.getClass());
-                }
-
-                if (serverObject.has("totalLoginCountsInDay")) {
-                    serverData.totalLoginCountsInDay = context.deserialize(serverObject.get("totalLoginCountsInDay"), serverData.totalLoginCountsInDay.getClass());
-                }
-
-                if (serverObject.has("totalPlayTimesInDay")) {
-                    JsonObject totalPlayTimesInDayObject = serverObject.getAsJsonObject("totalPlayTimesInDay");
-                    for (Map.Entry<String, JsonElement> entry : totalPlayTimesInDayObject.entrySet()) {
-                        String timeStr = entry.getValue().getAsString();
-                        long seconds = TimeUtil.TimePeriodConverter.toSeconds(timeStr);
-                        serverData.totalPlayTimesInDay.put(entry.getKey(), seconds);
+                // 解析 daily_peak_online
+                if (serverTrackingObject.has("daily_peak_online")) {
+                    JsonObject dailyPeakOnlineObject = serverTrackingObject.getAsJsonObject("daily_peak_online");
+                    rootData.serverTracking.dailyPeakOnline = new ConcurrentHashMap<>();
+                    for (Map.Entry<String, JsonElement> entry : dailyPeakOnlineObject.entrySet()) {
+                        JsonObject dateObject = entry.getValue().getAsJsonObject();
+                        DailyPeakOnlineData dailyData = new DailyPeakOnlineData();
+                        if (dateObject.has("overall")) {
+                            dailyData.overall = dateObject.get("overall").getAsInt();
+                        }
+                        if (dateObject.has("sub_server")) {
+                            // sub_server 是数组
+                            JsonArray subServersArray = dateObject.getAsJsonArray("sub_server");
+                            dailyData.subServer = new ArrayList<>();
+                            for (JsonElement subServerElement : subServersArray) {
+                                JsonObject subServerObject = subServerElement.getAsJsonObject();
+                                SubServerPeakData subServerData = new SubServerPeakData();
+                                if (subServerObject.has("server_name")) {
+                                    subServerData.serverName = subServerObject.get("server_name").getAsString();
+                                }
+                                if (subServerObject.has("peak_online")) {
+                                    subServerData.peakOnline = subServerObject.get("peak_online").getAsInt();
+                                }
+                                dailyData.subServer.add(subServerData);
+                            }
+                        }
+                        rootData.serverTracking.dailyPeakOnline.put(entry.getKey(), dailyData);
                     }
                 }
 
-                if (serverObject.has("totalServerLoginCounts")) {
-                    serverData.totalServerLoginCounts = context.deserialize(serverObject.get("totalServerLoginCounts"), serverData.totalServerLoginCounts.getClass());
+                // 解析 daily_new_players
+                if (serverTrackingObject.has("daily_new_players")) {
+                    JsonObject dailyNewPlayersObject = serverTrackingObject.getAsJsonObject("daily_new_players");
+                    rootData.serverTracking.dailyNewPlayers = new ConcurrentHashMap<>();
+                    for (Map.Entry<String, JsonElement> entry : dailyNewPlayersObject.entrySet()) {
+                        JsonObject dateObject = entry.getValue().getAsJsonObject();
+                        DailyNewPlayersData dailyData = new DailyNewPlayersData();
+                        if (dateObject.has("overall")) {
+                            dailyData.overall = dateObject.get("overall").getAsInt();
+                        }
+                        if (dateObject.has("players")) {
+                            // players 是数组
+                            JsonArray playersArray = dateObject.getAsJsonArray("players");
+                            dailyData.players = new ArrayList<>();
+                            for (JsonElement playerElement : playersArray) {
+                                JsonObject playerObject = playerElement.getAsJsonObject();
+                                NewPlayerData playerData = new NewPlayerData();
+                                if (playerObject.has("uuid")) {
+                                    playerData.uuid = UUID.fromString(playerObject.get("uuid").getAsString());
+                                }
+                                if (playerObject.has("time")) {
+                                    playerData.time = playerObject.get("time").getAsString();
+                                }
+                                dailyData.players.add(playerData);
+                            }
+                        }
+                        rootData.serverTracking.dailyNewPlayers.put(entry.getKey(), dailyData);
+                    }
                 }
-
-                if (serverObject.has("dailyServerLoginCounts")) {
-                    serverData.dailyServerLoginCounts = context.deserialize(serverObject.get("dailyServerLoginCounts"), serverData.dailyServerLoginCounts.getClass());
-                }
-
-                rootData.server = serverData;
             }
 
-            if (rootObject.has("players")) {
-                JsonObject playersObject = rootObject.getAsJsonObject("players");
-                for (Map.Entry<String, JsonElement> entry : playersObject.entrySet()) {
-                    UUID uuid = UUID.fromString(entry.getKey());
-                    PlayerData playerData = context.deserialize(entry.getValue(), PlayerData.class);
-                    rootData.players.put(uuid, playerData);
+            // 解析 player_data
+            if (rootObject.has("player_data")) {
+                // player_data 是数组
+                JsonArray playersArray = rootObject.getAsJsonArray("player_data");
+                rootData.playerData = new ArrayList<>();
+                for (JsonElement playerElement : playersArray) {
+                    JsonObject playerObject = playerElement.getAsJsonObject();
+                    PlayerData playerData = new PlayerData();
+
+                    if (playerObject.has("id")) {
+                        playerData.id = playerObject.get("id").getAsInt();
+                    }
+                    if (playerObject.has("uuid")) {
+                        playerData.uuid = UUID.fromString(playerObject.get("uuid").getAsString());
+                    }
+                    if (playerObject.has("username")) {
+                        playerData.username = playerObject.get("username").getAsString();
+                    }
+                    if (playerObject.has("first_join_time")) {
+                        playerData.firstJoinTime = playerObject.get("first_join_time").getAsString();
+                    }
+                    if (playerObject.has("last_login_time")) {
+                        playerData.lastLoginTime = playerObject.get("last_login_time").getAsString();
+                    }
+                    if (playerObject.has("play_time")) {
+                        String timeStr = playerObject.get("play_time").getAsString();
+                        playerData.playTime = TimeUtil.TimePeriodConverter.toSeconds(timeStr);
+                    }
+
+                    // 解析 daily_server_paths
+                    if (playerObject.has("daily_server_paths")) {
+                        JsonObject pathsObject = playerObject.getAsJsonObject("daily_server_paths");
+                        playerData.dailyServerPaths = new ConcurrentHashMap<>();
+                        for (Map.Entry<String, JsonElement> pathEntry : pathsObject.entrySet()) {
+                            // 路径是数组
+                            JsonArray datePathsArray = pathEntry.getValue().getAsJsonArray();
+                            List<ServerPathData> pathList = new ArrayList<>();
+                            for (JsonElement pathElement : datePathsArray) {
+                                JsonObject pathObject = pathElement.getAsJsonObject();
+                                ServerPathData pathData = new ServerPathData();
+                                if (pathObject.has("time")) {
+                                    pathData.time = pathObject.get("time").getAsString();
+                                }
+                                if (pathObject.has("from")) {
+                                    pathData.from = pathObject.get("from").getAsString();
+                                }
+                                if (pathObject.has("to")) {
+                                    pathData.to = pathObject.get("to").getAsString();
+                                }
+                                pathList.add(pathData);
+                            }
+                            playerData.dailyServerPaths.put(pathEntry.getKey(), pathList);
+                        }
+                    }
+
+                    rootData.playerData.add(playerData);
                 }
             }
 
@@ -180,232 +321,111 @@ public class DataFileLoader {
         }
     }
 
-    // PlayerData 序列化适配器
-    private static class PlayerDataSerializer implements JsonSerializer<PlayerData> {
-        @Override
-        public JsonElement serialize(PlayerData src, Type typeOfSrc, JsonSerializationContext context) {
-            JsonObject playerObject = new JsonObject();
-            playerObject.addProperty("playerName", src.playerName);
-            playerObject.addProperty("firstJoinTime", src.firstJoinTime);
-            playerObject.addProperty("lastLoginTime", src.lastLoginTime);
-            playerObject.addProperty("lastQuitTime", src.lastQuitTime);
-            playerObject.addProperty("totalPlayTime", TimeUtil.TimePeriodConverter.fromSeconds(src.totalPlayTime));
-            playerObject.addProperty("totalLoginCount", src.totalLoginCount);
-
-            // dailyLogins - 转换 totalPlayTimeInDay 为 HH:mm:ss 格式
-            JsonObject dailyLoginsObject = new JsonObject();
-            for (Map.Entry<String, DailyLoginData> entry : src.dailyLogins.entrySet()) {
-                JsonObject dailyLoginObject = new JsonObject();
-                dailyLoginObject.addProperty("loginCount", entry.getValue().loginCount);
-                dailyLoginObject.addProperty("totalPlayTimeInDay", TimeUtil.TimePeriodConverter.fromSeconds(entry.getValue().totalPlayTimeInDay));
-                dailyLoginObject.addProperty("lastLoginTime", entry.getValue().lastLoginTime);
-                dailyLoginsObject.add(entry.getKey(), dailyLoginObject);
-            }
-            playerObject.add("dailyLogins", dailyLoginsObject);
-
-            // weeklyLogins - 转换 totalPlayTimeInWeek 为 HH:mm:ss 格式
-            JsonObject weeklyLoginsObject = new JsonObject();
-            for (Map.Entry<String, WeeklyLoginData> entry : src.weeklyLogins.entrySet()) {
-                JsonObject weeklyLoginObject = new JsonObject();
-                weeklyLoginObject.addProperty("loginCount", entry.getValue().loginCount);
-                weeklyLoginObject.addProperty("totalPlayTimeInWeek", TimeUtil.TimePeriodConverter.fromSeconds(entry.getValue().totalPlayTimeInWeek));
-                weeklyLoginObject.addProperty("lastLoginTime", entry.getValue().lastLoginTime);
-                weeklyLoginsObject.add(entry.getKey(), weeklyLoginObject);
-            }
-            playerObject.add("weeklyLogins", weeklyLoginsObject);
-
-            playerObject.add("loggedInServerLoginCounts", context.serialize(src.loggedInServerLoginCounts));
-            playerObject.add("lastLoginServerTimes", context.serialize(src.lastLoginServerTimes));
-
-            return playerObject;
-        }
-    }
-
-    // PlayerData 反序列化适配器
-    private static class PlayerDataDeserializer implements JsonDeserializer<PlayerData> {
-        @Override
-        public PlayerData deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            JsonObject playerObject = json.getAsJsonObject();
-            PlayerData playerData = new PlayerData("");
-
-            if (playerObject.has("playerName")) {
-                playerData.playerName = playerObject.get("playerName").getAsString();
-            }
-
-            if (playerObject.has("firstJoinTime")) {
-                playerData.firstJoinTime = playerObject.get("firstJoinTime").getAsString();
-            }
-
-            if (playerObject.has("lastLoginTime")) {
-                playerData.lastLoginTime = playerObject.get("lastLoginTime").getAsString();
-            }
-
-            if (playerObject.has("lastQuitTime")) {
-                playerData.lastQuitTime = playerObject.get("lastQuitTime").getAsString();
-            }
-
-            if (playerObject.has("totalPlayTime")) {
-                String timeStr = playerObject.get("totalPlayTime").getAsString();
-                playerData.totalPlayTime = TimeUtil.TimePeriodConverter.toSeconds(timeStr);
-            }
-
-            if (playerObject.has("totalLoginCount")) {
-                playerData.totalLoginCount = playerObject.get("totalLoginCount").getAsInt();
-            }
-
-            if (playerObject.has("dailyLogins")) {
-                JsonObject dailyLoginsObject = playerObject.getAsJsonObject("dailyLogins");
-                for (Map.Entry<String, JsonElement> entry : dailyLoginsObject.entrySet()) {
-                    JsonObject dailyLoginObject = entry.getValue().getAsJsonObject();
-                    DailyLoginData dailyLoginData = new DailyLoginData();
-
-                    if (dailyLoginObject.has("loginCount")) {
-                        dailyLoginData.loginCount = dailyLoginObject.get("loginCount").getAsInt();
-                    }
-
-                    if (dailyLoginObject.has("totalPlayTimeInDay")) {
-                        String timeStr = dailyLoginObject.get("totalPlayTimeInDay").getAsString();
-                        dailyLoginData.totalPlayTimeInDay = TimeUtil.TimePeriodConverter.toSeconds(timeStr);
-                    }
-
-                    if (dailyLoginObject.has("lastLoginTime")) {
-                        dailyLoginData.lastLoginTime = dailyLoginObject.get("lastLoginTime").getAsString();
-                    }
-
-                    playerData.dailyLogins.put(entry.getKey(), dailyLoginData);
-                }
-            }
-
-            if (playerObject.has("weeklyLogins")) {
-                JsonObject weeklyLoginsObject = playerObject.getAsJsonObject("weeklyLogins");
-                for (Map.Entry<String, JsonElement> entry : weeklyLoginsObject.entrySet()) {
-                    JsonObject weeklyLoginObject = entry.getValue().getAsJsonObject();
-                    WeeklyLoginData weeklyLoginData = new WeeklyLoginData();
-
-                    if (weeklyLoginObject.has("loginCount")) {
-                        weeklyLoginData.loginCount = weeklyLoginObject.get("loginCount").getAsInt();
-                    }
-
-                    if (weeklyLoginObject.has("totalPlayTimeInWeek")) {
-                        String timeStr = weeklyLoginObject.get("totalPlayTimeInWeek").getAsString();
-                        weeklyLoginData.totalPlayTimeInWeek = TimeUtil.TimePeriodConverter.toSeconds(timeStr);
-                    }
-
-                    if (weeklyLoginObject.has("lastLoginTime")) {
-                        weeklyLoginData.lastLoginTime = weeklyLoginObject.get("lastLoginTime").getAsString();
-                    }
-
-                    playerData.weeklyLogins.put(entry.getKey(), weeklyLoginData);
-                }
-            }
-
-            if (playerObject.has("loggedInServerLoginCounts")) {
-                playerData.loggedInServerLoginCounts = context.deserialize(
-                        playerObject.get("loggedInServerLoginCounts"),
-                        playerData.loggedInServerLoginCounts.getClass()
-                );
-            }
-
-            if (playerObject.has("lastLoginServerTimes")) {
-                playerData.lastLoginServerTimes = context.deserialize(
-                        playerObject.get("lastLoginServerTimes"),
-                        playerData.lastLoginServerTimes.getClass()
-                );
-            }
-
-            return playerData;
-        }
-    }
-
     public static class RootData {
-        public ServerData server;
-        public Map<UUID, PlayerData> players;
+        public ServerInfoData serverInfo;
+        public ServerTrackingData serverTracking;
+        public List<PlayerData> playerData;
 
         public RootData() {
-            this.server = new ServerData();
-            this.players = new ConcurrentHashMap<>();
+            this.serverInfo = new ServerInfoData();
+            this.serverTracking = new ServerTrackingData();
+            this.playerData = new ArrayList<>();
         }
     }
 
-    public static class ServerData {
-        public String bootTime; // 改为仅日期格式
-        public String lastReportGenerationDate;
-        public Map<String, DailyNewPlayersData> newPlayersToday; // 保持 DailyNewPlayersData 类型
-        public Map<String, Integer> totalLoginCountsInDay; // 重命名
-        public Map<String, Long> totalPlayTimesInDay; // 保持为Long类型，但需要格式化输出
-        public Map<String, Integer> totalServerLoginCounts; // 新增字段
-        public Map<String, Map<String, Integer>> dailyServerLoginCounts;
+    public static class ServerInfoData {
+        public String startupTime;
+        public String lastReportGenerationTime;
 
-        public ServerData() {
+        public ServerInfoData() {
             long currentTime = TimeUtil.SystemTime.getCurrentTimestamp();
-            this.bootTime = TimeUtil.DateConverter.fromTimestamp(currentTime); // 改为仅日期格式
-            this.lastReportGenerationDate = TimeUtil.DateConverter.fromTimestamp(currentTime);
-            this.newPlayersToday = new ConcurrentHashMap<>();
-            this.totalLoginCountsInDay = new ConcurrentHashMap<>(); // 初始化
-            this.totalPlayTimesInDay = new ConcurrentHashMap<>();
-            this.totalServerLoginCounts = new ConcurrentHashMap<>(); // 初始化
-            this.dailyServerLoginCounts = new ConcurrentHashMap<>();
+            this.startupTime = TimeUtil.DateConverter.fromTimestamp(currentTime);
+            this.lastReportGenerationTime = TimeUtil.DateConverter.fromTimestamp(currentTime);
+        }
+    }
+
+    public static class ServerTrackingData {
+        public int historicalPeakOnline;
+        public Map<String, DailyPeakOnlineData> dailyPeakOnline;
+        public Map<String, DailyNewPlayersData> dailyNewPlayers;
+
+        public ServerTrackingData() {
+            this.historicalPeakOnline = 0;
+            this.dailyPeakOnline = new ConcurrentHashMap<>();
+            this.dailyNewPlayers = new ConcurrentHashMap<>();
+        }
+    }
+
+    public static class DailyPeakOnlineData {
+        public int overall;
+        public List<SubServerPeakData> subServer;
+
+        public DailyPeakOnlineData() {
+            this.overall = 0;
+            this.subServer = new ArrayList<>();
+        }
+    }
+
+    public static class SubServerPeakData {
+        public String serverName;
+        public int peakOnline;
+
+        public SubServerPeakData() {
+            this.serverName = "";
+            this.peakOnline = 0;
         }
     }
 
     public static class DailyNewPlayersData {
-        public int totalNewPlayersInDay; // 重命名 'count' 为 'totalNewPlayersInDay'
-        public Map<UUID, String> players; // 重命名 'newPlayers' 为 'players'
+        public int overall;
+        public List<NewPlayerData> players;
 
         public DailyNewPlayersData() {
-            this.totalNewPlayersInDay = 0;
-            this.players = new ConcurrentHashMap<>();
+            this.overall = 0;
+            this.players = new ArrayList<>();
+        }
+    }
+
+    public static class NewPlayerData {
+        public UUID uuid;
+        public String time;
+
+        public NewPlayerData() {
+            this.uuid = UUID.randomUUID();
+            this.time = "";
         }
     }
 
     public static class PlayerData {
-        public String playerName; // 重命名 'lastKnownName' 为 'playerName'
-        public String firstJoinTime; // 重命名 'firstLoginTime' 为 'firstJoinTime'
+        public int id;
+        public UUID uuid;
+        public String username;
+        public String firstJoinTime;
         public String lastLoginTime;
-        public String lastQuitTime; // 新增字段
-        public long totalPlayTime; // 总游戏时长，秒
-        public int totalLoginCount; // 新增字段
-        public Map<String, DailyLoginData> dailyLogins; // 更改类型和名称
-        public Map<String, WeeklyLoginData> weeklyLogins;
-        public Map<String, Integer> loggedInServerLoginCounts;
-        public Map<String, String> lastLoginServerTimes;
+        public long playTime;
+        public Map<String, List<ServerPathData>> dailyServerPaths;
 
-        public PlayerData(String name) {
-            this.playerName = name;
+        public PlayerData() {
+            this.id = 0;
+            this.uuid = UUID.randomUUID();
+            this.username = "";
             long currentTime = TimeUtil.SystemTime.getCurrentTimestamp();
             this.firstJoinTime = TimeUtil.DateTimeConverter.fromTimestamp(currentTime);
             this.lastLoginTime = TimeUtil.DateTimeConverter.fromTimestamp(currentTime);
-            this.lastQuitTime = ""; // 初始为空
-            this.totalPlayTime = 0;
-            this.totalLoginCount = 0; // 初始化
-            this.dailyLogins = new ConcurrentHashMap<>(); // 初始化
-            this.weeklyLogins = new ConcurrentHashMap<>();
-            this.loggedInServerLoginCounts = new ConcurrentHashMap<>();
-            this.lastLoginServerTimes = new ConcurrentHashMap<>();
+            this.playTime = 0;
+            this.dailyServerPaths = new ConcurrentHashMap<>();
         }
     }
 
-    public static class DailyLoginData {
-        public int loginCount;
-        public long totalPlayTimeInDay; // 秒
-        public String lastLoginTime; // 格式 "yyyy-MM-dd HH:mm:ss"
+    public static class ServerPathData {
+        public String time;
+        public String from;
+        public String to;
 
-        public DailyLoginData() {
-            this.loginCount = 0;
-            this.totalPlayTimeInDay = 0;
-            this.lastLoginTime = "";
-        }
-    }
-
-    public static class WeeklyLoginData {
-        public int loginCount; // 新增字段
-        public long totalPlayTimeInWeek; // 秒
-        public String lastLoginTime; // 新增字段
-
-        public WeeklyLoginData() {
-            this.loginCount = 0;
-            this.totalPlayTimeInWeek = 0;
-            this.lastLoginTime = "";
+        public ServerPathData() {
+            this.time = "";
+            this.from = "";
+            this.to = "";
         }
     }
 
@@ -441,122 +461,141 @@ public class DataFileLoader {
     }
 
     public PlayerData getPlayerData(UUID uuid) {
-        return rootData.players.get(uuid);
+        for (PlayerData player : rootData.playerData) {
+            if (player.uuid.equals(uuid)) {
+                return player;
+            }
+        }
+        return null;
     }
 
     public void createPlayerData(UUID uuid, String playerName) {
-        PlayerData newPlayer = new PlayerData(playerName);
-        rootData.players.put(uuid, newPlayer);
+        PlayerData newPlayer = new PlayerData();
+        newPlayer.uuid = uuid;
+        newPlayer.username = playerName;
+        newPlayer.id = rootData.playerData.size() + 1;
+
+        rootData.playerData.add(newPlayer);
 
         long currentTime = TimeUtil.SystemTime.getCurrentTimestamp();
         String currentDate = TimeUtil.DateConverter.fromTimestamp(currentTime);
-        // 更新 DailyNewPlayersData
-        DailyNewPlayersData dailyNewPlayers = rootData.server.newPlayersToday.computeIfAbsent(currentDate, k -> new DailyNewPlayersData());
-        dailyNewPlayers.players.put(uuid, playerName);
-        dailyNewPlayers.totalNewPlayersInDay++; // 更新新玩家总数
 
-        // 更新 DailyLoginData for player's first login
-        DailyLoginData dailyLogin = new DailyLoginData();
-        dailyLogin.loginCount = 1;
-        dailyLogin.lastLoginTime = TimeUtil.DateTimeConverter.fromTimestamp(currentTime);
-        newPlayer.dailyLogins.put(currentDate, dailyLogin);
-
-        // 更新 WeeklyLoginData for player's first login
-        String currentWeek = getCurrentWeekString();
-        WeeklyLoginData weeklyLogin = new WeeklyLoginData();
-        weeklyLogin.loginCount = 1;
-        weeklyLogin.lastLoginTime = TimeUtil.DateTimeConverter.fromTimestamp(currentTime);
-        newPlayer.weeklyLogins.put(currentWeek, weeklyLogin);
-
-        // 更新服务器的总登录次数（每日）
-        rootData.server.totalLoginCountsInDay.merge(currentDate, 1, Integer::sum);
+        // 更新 daily_new_players
+        DailyNewPlayersData dailyNewPlayers = rootData.serverTracking.dailyNewPlayers.computeIfAbsent(currentDate, k -> new DailyNewPlayersData());
+        NewPlayerData newPlayerData = new NewPlayerData();
+        newPlayerData.uuid = uuid;
+        // 使用 TimeUtil 获取本地时间点
+        newPlayerData.time = TimeUtil.TimePeriodConverter.fromTimestamp(currentTime);
+        dailyNewPlayers.players.add(newPlayerData);
+        dailyNewPlayers.overall = dailyNewPlayers.players.size();
 
         savePlayerData();
     }
 
+
     public void updatePlayerOnLogin(UUID uuid, String playerName) {
-        PlayerData playerData = rootData.players.get(uuid);
+        PlayerData playerData = getPlayerData(uuid);
         if (playerData == null) {
             logger.warn("Attempted to update login for unknown player: {}. Creating new data.", uuid);
             createPlayerData(uuid, playerName);
-            playerData = rootData.players.get(uuid); // Re-fetch after creation
+            playerData = getPlayerData(uuid);
         }
 
         long currentTime = TimeUtil.SystemTime.getCurrentTimestamp();
-        playerData.playerName = playerName; // 更新玩家名称
+        playerData.username = playerName;
         playerData.lastLoginTime = TimeUtil.DateTimeConverter.fromTimestamp(currentTime);
-        playerData.totalLoginCount++; // 更新总登录次数
 
-        String currentDate = TimeUtil.DateConverter.fromTimestamp(currentTime);
-        // 更新玩家每日登录数据
-        DailyLoginData dailyLogin = playerData.dailyLogins.computeIfAbsent(currentDate, k -> new DailyLoginData());
-        dailyLogin.loginCount++;
-        dailyLogin.lastLoginTime = playerData.lastLoginTime;
-
-        // 更新玩家每周登录数据
-        String currentWeek = getCurrentWeekString();
-        WeeklyLoginData weeklyLogin = playerData.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
-        weeklyLogin.loginCount++;
-        weeklyLogin.lastLoginTime = playerData.lastLoginTime;
-
-        // 更新服务器的总登录次数（每日）
-        rootData.server.totalLoginCountsInDay.merge(currentDate, 1, Integer::sum);
         savePlayerData();
     }
 
     public void updatePlayerOnQuit(UUID uuid, String playerName, String disconnectedFromServer, Duration sessionDuration) {
-        PlayerData playerData = rootData.players.get(uuid);
+        PlayerData playerData = getPlayerData(uuid);
         if (playerData == null) {
             logger.warn("Attempted to update quit for unknown player: {}. Skipping.", uuid);
             return;
         }
 
-        long currentTime = TimeUtil.SystemTime.getCurrentTimestamp();
-        playerData.lastQuitTime = TimeUtil.DateTimeConverter.fromTimestamp(currentTime); // 更新最后退出时间
-        playerData.totalPlayTime += sessionDuration.getSeconds(); // 更新总游戏时长
+        playerData.playTime += sessionDuration.getSeconds();
 
-        String currentDate = TimeUtil.DateConverter.fromTimestamp(currentTime);
-        // 更新玩家每日游戏时长
-        DailyLoginData dailyLogin = playerData.dailyLogins.computeIfAbsent(currentDate, k -> new DailyLoginData());
-        dailyLogin.totalPlayTimeInDay += sessionDuration.getSeconds();
-
-        // 更新玩家每周游戏时长
-        String currentWeek = getCurrentWeekString();
-        WeeklyLoginData weeklyLogin = playerData.weeklyLogins.computeIfAbsent(currentWeek, k -> new WeeklyLoginData());
-        weeklyLogin.totalPlayTimeInWeek += sessionDuration.getSeconds();
-
-        // 更新服务器总游戏时长（每日）
-        rootData.server.totalPlayTimesInDay.merge(currentDate, sessionDuration.getSeconds(), Long::sum);
         savePlayerData();
     }
 
     public void updatePlayerServerLogin(UUID uuid, String serverName) {
-        PlayerData playerData = rootData.players.get(uuid);
+        PlayerData playerData = getPlayerData(uuid);
         if (playerData == null) {
             logger.warn("Attempted to update server login for unknown player: {}. Please ensure player data is created.", uuid);
             return;
         }
+
         long currentTime = TimeUtil.SystemTime.getCurrentTimestamp();
         String currentDate = TimeUtil.DateConverter.fromTimestamp(currentTime);
+        // 使用新的方法获取本地时间
+        String timeStr = TimeUtil.TimePeriodConverter.fromTimestamp(currentTime);
 
-        // 更新玩家在该服务器的登录次数
-        playerData.loggedInServerLoginCounts.merge(serverName, 1, Integer::sum);
-        playerData.lastLoginServerTimes.put(serverName, TimeUtil.DateTimeConverter.fromTimestamp(currentTime)); // 更新最后一次登录该服务器的时间
+        // 更新 daily_server_paths
+        List<ServerPathData> serverPaths = playerData.dailyServerPaths.computeIfAbsent(currentDate, k -> new ArrayList<>());
+        if (!serverPaths.isEmpty()) {
+            ServerPathData lastPath = serverPaths.get(serverPaths.size() - 1);
+            // 防止重复记录相同路径
+            if (!lastPath.to.equals(serverName)) {
+                ServerPathData newPath = new ServerPathData();
+                newPath.time = timeStr;
+                newPath.from = lastPath.to;
+                newPath.to = serverName;
+                serverPaths.add(newPath);
+            }
+        } else {
+            ServerPathData newPath = new ServerPathData();
+            newPath.time = timeStr;
+            newPath.from = "unknown";
+            newPath.to = serverName;
+            serverPaths.add(newPath);
+        }
 
-        // 更新服务器总登录次数 (所有时间段)
-        rootData.server.totalServerLoginCounts.merge(serverName, 1, Integer::sum);
-
-        // 更新服务器每日登录次数
-        Map<String, Integer> dailyServerLogins = rootData.server.dailyServerLoginCounts.computeIfAbsent(currentDate, k -> new ConcurrentHashMap<>());
-        dailyServerLogins.merge(serverName, 1, Integer::sum);
         savePlayerData();
     }
 
-    private String getCurrentWeekString() {
-        java.time.LocalDate now = java.time.LocalDate.now();
-        WeekFields weekFields = WeekFields.of(Locale.getDefault());
-        int weekOfWeekYear = now.get(weekFields.weekOfWeekBasedYear());
-        int weekYear = now.get(weekFields.weekBasedYear());
-        return String.format("%d-W%02d", weekYear, weekOfWeekYear);
+    public void updateHistoricalPeakOnline(int currentOnlineCount) {
+        // 更新当日峰值
+        String currentDate = TimeUtil.DateConverter.fromTimestamp(TimeUtil.SystemTime.getCurrentTimestamp());
+        DailyPeakOnlineData dailyPeak = rootData.serverTracking.dailyPeakOnline.computeIfAbsent(currentDate, k -> new DailyPeakOnlineData());
+
+        if (currentOnlineCount > dailyPeak.overall) {
+            dailyPeak.overall = currentOnlineCount;
+
+            // 更新历史峰值
+            if (currentOnlineCount > rootData.serverTracking.historicalPeakOnline) {
+                rootData.serverTracking.historicalPeakOnline = currentOnlineCount;
+            }
+
+            savePlayerData();
+        }
+    }
+
+    public void updateSubServerPeakOnline(String serverName, int currentOnlineCount) {
+        String currentDate = TimeUtil.DateConverter.fromTimestamp(TimeUtil.SystemTime.getCurrentTimestamp());
+        DailyPeakOnlineData dailyPeak = rootData.serverTracking.dailyPeakOnline.computeIfAbsent(currentDate, k -> new DailyPeakOnlineData());
+
+        // 查找是否已存在该服务器记录
+        SubServerPeakData subServerData = null;
+        for (SubServerPeakData subServer : dailyPeak.subServer) {
+            if (subServer.serverName.equals(serverName)) {
+                subServerData = subServer;
+                break;
+            }
+        }
+
+        // 如果不存在，创建新记录
+        if (subServerData == null) {
+            subServerData = new SubServerPeakData();
+            subServerData.serverName = serverName;
+            dailyPeak.subServer.add(subServerData);
+        }
+
+        // 更新峰值
+        if (currentOnlineCount > subServerData.peakOnline) {
+            subServerData.peakOnline = currentOnlineCount;
+            savePlayerData();
+        }
     }
 }

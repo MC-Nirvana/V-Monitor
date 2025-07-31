@@ -174,20 +174,12 @@ commands:
       info: "<gold>Please use: <white>/vm player info <player_name></white></gold>"
 
     info:
-      server_stats_header: "<gold><bold>--- Server Login Statistics ---</bold></gold>"
-      server_stat_line: "<gold>{server}:</gold> <gray>{count} times</gray>"
-      no_server_stats: "<gray>No server login records found</gray>"
-      never_quit: "Never quit"
       format: |
 
         <gold>--- <yellow>Player Info: {player_name}</yellow> <gold>---</gold>
-        <gold>Player Name:</gold> <gray>{player_name}</gray>
+        <gold>Player ID:</gold> <gray>{player_id}</gray>
         <gold>UUID:</gold> <gray>{uuid}</gray>
+        <gold>Player Name:</gold> <gray>{player_name}</gray>
         <gold>First Join Time:</gold> <gray>{first_join_time}</gray>
         <gold>Last Login Time:</gold> <gray>{last_login_time}</gray>
-        <gold>Last Quit Time:</gold> <gray>{last_quit_time}</gray>
-        <gold>Total Logins:</gold> <gray>{total_login_count}</gray>
         <gold>Total Play Time:</gold> <gray>{total_play_time}</gray>
-
-        {server_stats}
-

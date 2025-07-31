@@ -15,8 +15,7 @@ import com.velocitypowered.api.command.CommandSource;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.Map;
-import java.util.UUID;
+import java.util.List;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
@@ -81,8 +80,8 @@ public class PlayerCommand {
 
             // 从数据文件中获取所有玩家名称并进行过滤
             DataFileLoader.RootData rootData = dataFileLoader.getRootData();
-            for (Map.Entry<UUID, DataFileLoader.PlayerData> entry : rootData.players.entrySet()) {
-                String playerName = entry.getValue().playerName;
+            for (DataFileLoader.PlayerData player : rootData.playerData) {
+                String playerName = player.username;
                 if (playerName.toLowerCase().startsWith(remaining)) {
                     builder.suggest(playerName);
                 }
