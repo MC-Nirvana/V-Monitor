@@ -62,7 +62,7 @@ public class ConfigFileLoader {
 
     private void loadServerDisplayNames() {
         serverDisplayNames.clear(); // 清空旧数据
-        Map<String, Object> aliasesSection = getTable("server-aliases");
+        Map<String, Object> aliasesSection = getTable("server-info.aliases");
         if (aliasesSection != null) {
             for (Map.Entry<String, Object> entry : aliasesSection.entrySet()) {
                 String serverKey = entry.getKey();
@@ -79,7 +79,6 @@ public class ConfigFileLoader {
         }
         logger.debug("Loaded server display names: {}", serverDisplayNames);
     }
-
 
     private Object getNestedValue(String key) {
         String[] parts = key.split("\\.");
@@ -141,7 +140,7 @@ public class ConfigFileLoader {
     }
 
     public String getLanguageKey() {
-        return getString("language.default");
+        return getString("plugin-basic.language.default");
     }
 
     public static class ConfigLoadException extends RuntimeException {
