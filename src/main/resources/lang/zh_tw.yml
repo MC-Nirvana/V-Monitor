@@ -97,6 +97,7 @@ commands:
       all_format: |
 
         <gold>--- <yellow>Velocity 實例概覽</yellow> <gold>---
+        <yellow>伺服器名稱:</yellow> <green>{server_name}</green>
         <yellow>核心版本:</yellow> <green>{proxy_version}</green>
         <yellow>總計在線人數:</yellow> <blue>{total_player}</blue>人
         <yellow>伺服器數量:</yellow> <green>{server_count}</green>台

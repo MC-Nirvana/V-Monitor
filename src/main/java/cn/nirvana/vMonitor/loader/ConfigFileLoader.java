@@ -143,6 +143,10 @@ public class ConfigFileLoader {
         return getString("plugin-basic.language.default");
     }
 
+    public String getServerName() {
+        return getString("server-info.name");
+    }
+
     public static class ConfigLoadException extends RuntimeException {
         public ConfigLoadException(String message) {
             super(message);

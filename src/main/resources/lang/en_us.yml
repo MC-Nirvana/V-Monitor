@@ -98,6 +98,7 @@ commands:
       all_format: |  
         
         <gold>--- <yellow>Velocity Instance Overview</yellow> <gold>---
+        <yellow>Server name:</yellow> <green>{server_name}</green>
         <yellow>Core version:</yellow> <green>{proxy_version}</green>
         <yellow>Total players online:</yellow> <blue>{total_player}</blue>
         <yellow>Server count:</yellow> <green>{server_count}</green>

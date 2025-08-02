@@ -178,6 +178,9 @@ public class ServerInfoModule {
                         serverUptime = languageFileLoader.getMessage("global.unknown_info");
                     }
 
+                    // 从配置文件获取服务器名称
+                    String serverName = configFileLoader.getServerName();
+
                     String allFormat = languageFileLoader.getMessage("commands.server.info.all_format")
                             .replace("{proxy_version}", proxyVersion)
                             .replace("{total_player}", String.valueOf(totalOnlinePlayers.get()))
@@ -186,7 +189,8 @@ public class ServerInfoModule {
                             .replace("{offline_servers}", String.valueOf(offlineServersCount.get()))
                             .replace("{server_status_list}", serverStatusList.toString().trim())
                             .replace("{server_start_time}", serverStartTime)
-                            .replace("{server_uptime}", serverUptime);
+                            .replace("{server_uptime}", serverUptime)
+                            .replace("{server_name}", serverName); // 添加服务器名称替换
                     source.sendMessage(miniMessage.deserialize(allFormat));
                 });
 
