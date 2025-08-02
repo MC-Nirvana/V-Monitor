@@ -22,7 +22,7 @@ public class ReloadCommand {
     private void registerReloadCommand() {
         commandUtil.registerSubCommand(root -> {
             root.then(LiteralArgumentBuilder.<CommandSource>literal("reload")
-                    .requires(source -> source.hasPermission("vmonitor.reload"))
+                    .requires(source -> source.hasPermission("vmonitor.admin"))
                     .executes(context -> {
                         reloadModule.executeReload(context.getSource());
                         return SINGLE_SUCCESS;

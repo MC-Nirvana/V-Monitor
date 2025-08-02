@@ -7,14 +7,16 @@
 V-Monitor is a lightweight Velocity proxy plugin (Internal development code: Arona-01) focused on monitoring player activity such as joining, leaving, and switching servers, and providing convenient commands for players and administrators to query online player lists and detailed backend server information.
 
 ## II. Key Features
-- **Player Activity Notifications:** Send customizable messages when players join, leave, or switch servers (including first join distinction).
-- **Online Player List Query:** Provides commands to view the total online players on the proxy and an overview of online player lists on each backend server.
-- **Server Information Query:** Provides commands to query the overall proxy information and detailed information for specified backend servers.
-- **Plugin Information Query:** Provides commands to query the list of plugins and details of the specified plugin.
-- **Highly Customizable:** All messages and command outputs displayed to players or the console can be fully customized through language files.
-- **Multi-language Support:** Implements multi-language functionality through separate language files.
-- **Server Aliases:** Supports configuring aliases for backend servers.
-- **Data Persistence:** Uses UUIDs to record player's first join information.
+- **Player Activity Notifications:** Send customizable messages when players join (first join), leave, or switch servers.
+- **Online Player List Query:** Provide commands to view the total online count on the proxy and online player lists for each backend server.
+- **Server Information Query:** Provide commands to query the Velocity proxy's overview and detailed information of specified backend servers.
+- **Plugin Information Query:** Provide commands to query the plugin list and detailed information of specified plugins.
+- **Player Activity Information Query:** Provide commands to query player activity information.
+- **Highly Customizable:** All messages and command outputs directed at players can be customized via language files.
+- **Multi-language Support:** Implement multi-language functionality through independent language files.
+- **Server Aliases:** Support setting aliases for backend servers.
+- **Data Persistence:** Use SQLite and MySQL to store player activity data.
+- **WebSocket Support:** The plugin supports pushing player activity data information via WebSocket.
 
 ## III. Installation Guide
 1.  Download the latest version of the plugin JAR file from the project's [Release page](https://github.com/MC-Nirvana/V-Monitor/releases/latest).
@@ -27,15 +29,17 @@ V-Monitor is a lightweight Velocity proxy plugin (Internal development code: Aro
 ## IV. Plugin Usage (Commands)
 The plugin's main command is `/vmonitor`, with the alias `/vm`.
 
-| Command                            | Usage Example                                        | Permission Node    | Description                                            |
-|------------------------------------|------------------------------------------------------|--------------------|--------------------------------------------------------|
-| `help`                             | `/vm help`                                           | `none`             | Get general plugin help information.                   |
-| `reload`                           | `/vm reload`                                         | `vmonitor.reload`  | Reload configuration and language files.               |
-| `version`                          | `/vm version`                                        | `vmonitor.version` | Get plugin version information.                        |
-| `server list [all or server_name]` | `/vm server list all` or `/vm server list lobby`     | `none`             | List players on all or specified servers.              |
-| `server info [all or server_name]` | `/vm server info all` or `/vm server info lobby`     | `none`             | Get detailed information for all or specified servers. |
-| `plugin list`                      | `/vm plugin list`                                    | `vmonitor.plugin`  | List all loaded plugins.                               |
-| `plugin info [all or plugin_id]`   | `/vm plugin info all` or `/vm plugin info V-Monitor` | `vmonitor.plugin`  | Get detailed information for all or specified plugins. |
+| Command                            | Usage Example                                        | Permission Node  | Description                                            |
+|------------------------------------|------------------------------------------------------|------------------|--------------------------------------------------------|
+| `help`                             | `/vm help`                                           | `none`           | Get general plugin help information.                   |
+| `reload`                           | `/vm reload`                                         | `vmonitor.admin` | Reload configuration and language files.               |
+| `version`                          | `/vm version`                                        | `vmonitor.admin` | Get plugin version information.                        |
+| `server list [all or server_name]` | `/vm server list all` or `/vm server list lobby`     | `none`           | List players on all or specified servers.              |
+| `server info [all or server_name]` | `/vm server info all` or `/vm server info lobby`     | `none`           | Get detailed information for all or specified servers. |
+| `plugin list`                      | `/vm plugin list`                                    | `vmonitor.admin` | List all loaded plugins.                               |
+| `plugin info [all or plugin_id]`   | `/vm plugin info all` or `/vm plugin info V-Monitor` | `vmonitor.admin` | Get detailed information for all or specified plugins. |
+| `player info [player ID]`          | `/vm player info MC_Nirvana`                         | `vmonitor.admin` | Query player activity information.                     |
+| `player switch [player ID]`        | `/vm player switch MC_Nirvana`                       | `vmonitor.admin` | Get server switch logs for a specific player.          |
 
 *By default, players with OP permission and the console have all permission nodes.*
 

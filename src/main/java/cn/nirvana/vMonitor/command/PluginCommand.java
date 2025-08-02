@@ -49,7 +49,7 @@ public class PluginCommand {
     private void registerPluginCommand() {
         commandUtil.registerSubCommand(root -> {
             root.then(LiteralArgumentBuilder.<CommandSource>literal("plugin")
-                    .requires(source -> source.hasPermission("vmonitor.plugin"))
+                    .requires(source -> source.hasPermission("vmonitor.admin"))
                     .executes(context -> {
                         helpModule.executePluginHelp(context.getSource());
                         return SINGLE_SUCCESS;

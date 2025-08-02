@@ -47,7 +47,7 @@ public class PlayerCommand {
     private void registerPlayerCommand() {
         commandUtil.registerSubCommand(root -> {
             root.then(LiteralArgumentBuilder.<CommandSource>literal("player")
-                    .requires(source -> source.hasPermission("vmonitor.player"))
+                    .requires(source -> source.hasPermission("vmonitor.admin"))
                     .executes(context -> {
                         helpModule.executePlayerHelp(context.getSource());
                         return SINGLE_SUCCESS;

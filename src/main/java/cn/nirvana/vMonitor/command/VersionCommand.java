@@ -22,7 +22,7 @@ public class VersionCommand {
     private void registerVersionCommand() {
         commandUtil.registerSubCommand(root -> {
             root.then(LiteralArgumentBuilder.<CommandSource>literal("version")
-                    .requires(source -> source.hasPermission("vmonitor.version"))
+                    .requires(source -> source.hasPermission("vmonitor.admin"))
                     .executes(context -> {
                         versionModule.executeVersion(context.getSource());
                         return SINGLE_SUCCESS;

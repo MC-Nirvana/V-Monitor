@@ -7,14 +7,16 @@
 V-Monitor 是一个轻量级的 Velocity 代理端插件（内部开发代号：Arona-01），专注于监控玩家的加入、离开、切换服务器等活动状态，并提供方便的命令供玩家和管理员查询在线玩家列表以及后端服务器的详细信息。
 
 ## 二、主要特性
-- **玩家活动提醒:** 在玩家加入、离开、切换服务器时发送可自定义的消息（包含首次加入区分）。
+- **玩家活动提醒:** 在玩家加入（首次加入）、离开、切换服务器时发送可自定义的消息。
 - **在线玩家列表查询:** 提供命令查看代理总在线人数和各后端服务器的在线玩家列表。
 - **服务器信息查询:** 提供命令查询 Velocity 代理自身概览和指定后端服务器的详细信息。
 - **插件信息查询:** 提供命令查询插件列表和指定插件的详细信息。
+- **玩家活动信息查询:** 提供命令查询玩家活动信息。
 - **高度自定义:** 所有面向玩家的消息和命令输出都支持通过语言文件自定义格式。
 - **多语言支持:** 通过独立的语言文件实现多语言功能。
 - **服务器别名:** 支持为后端服务器设置别名。
-- **数据持久化:** 使用 UUID 记录玩家的首次加入信息。
+- **数据持久化:** 使用SQLite与MySQL存储玩家的活动数据。
+- **WebSocket支持**: 插件支持通过 WebSocket 推送玩家活动数据信息。
 
 ## 三、安装指南
 1.  从项目的 [Release 页面](https://github.com/MC-Nirvana/V-Monitor/releases/latest) 下载最新版本的插件 JAR 文件。
@@ -27,15 +29,17 @@ V-Monitor 是一个轻量级的 Velocity 代理端插件（内部开发代号：
 ## 四、插件用法 (命令)
 插件的主命令是 `/vmonitor`，别名为 `/vm`。
 
-| 命令                            | 用法示例                                             | 权限节点           | 描述                             |
-|---------------------------------|------------------------------------------------------|--------------------|----------------------------------|
-| `help`                          | `/vm help`                                           | `none`             | 获取插件总帮助信息。             |
-| `reload`                        | `/vm reload`                                         | `vmonitor.reload`  | 重载插件配置。                   |
-| `version`                       | `/vm version`                                        | `vmonitor.version` | 获取插件版本信息。                |
-| `server list [all或服务器名称]` | `/vm server list all` 或 `/vm server list lobby`     | `none`             | 列出所有或指定服务器上的玩家。   |
-| `server info [all或服务器名称]` | `/vm server info all` 或 `/vm server info lobby`     | `none`             | 获取所有或指定服务器的详细信息。 |
-| `plugin list`                   | `/vm plugin list`                                    | `vmonitor.plugin`  | 列出所有已加载插件。             |
-| `plugin info [all或插件ID]`     | `/vm plugin info all` 或 `/vm plugin info V-Monitor` | `vmonitor.plugin`  | 获取所有或指定插件的详细信息。   |
+| 命令                            | 用法示例                                             | 权限节点         | 描述                             |
+|---------------------------------|------------------------------------------------------|------------------|----------------------------------|
+| `help`                          | `/vm help`                                           | `none`           | 获取插件总帮助信息。             |
+| `reload`                        | `/vm reload`                                         | `vmonitor.admin` | 重载插件配置。                   |
+| `version`                       | `/vm version`                                        | `vmonitor.admin` | 获取插件版本信息。               |
+| `server list [all或服务器名称]` | `/vm server list all` 或 `/vm server list lobby`     | `none`           | 列出所有或指定服务器上的玩家。   |
+| `server info [all或服务器名称]` | `/vm server info all` 或 `/vm server info lobby`     | `none`           | 获取所有或指定服务器的详细信息。 |
+| `plugin list`                   | `/vm plugin list`                                    | `vmonitor.admin` | 列出所有已加载插件。             |
+| `plugin info [all或插件ID]`     | `/vm plugin info all` 或 `/vm plugin info V-Monitor` | `vmonitor.admin` | 获取所有或指定插件的详细信息。   |
+| `player info [玩家游戏ID]`      | `/vm player info MC_Nirvana`                         | `vmonitor.admin` | 获取指定玩家的详细信息。         |
+| `player switch [玩家游戏ID]`    | `/vm player switch MC_Nirvana`                       | `vmonitor.admin` | 获取指定玩家的服务器切换日志。   |
 
 *默认情况下，拥有 OP 权限的玩家和控制台拥有所有权限节点。*
 
