@@ -7,6 +7,45 @@ plugin-basic:
     # 默认语言（Default language）
     # 支持的语言：zh_cn, zh_tw, en_us（Support language: zh_cn, zh_tw, en_us）
     default: "zh_cn"
+  # 数据存储设置 (Data storage settings)
+  data-storage:
+    # 数据库类型（Database type）
+    # 支持的类型：sqlite, mysql（Supported types: sqlite, mysql）
+    type: "sqlite"
+    # SQLite数据库配置（SQLite database configuration）
+    sqlite:
+      # SQLite数据库文件路径（SQLite database file path）
+      path: "data.db"
+    # MySQL数据库连接配置（MySQL connection configuration）
+    mysql:
+      # MySQL服务器地址（MySQL server address）
+      host: "localhost"
+      # MySQL服务器端口（MySQL server port）
+      port: 3306
+      # MySQL数据库名称（MySQL database name）
+      database: "v_monitor"
+      # MySQL数据库用户名（MySQL database username）
+      username: "root"
+      # MySQL数据库密码（MySQL database password）
+      password: "password"
+      # HikariCP配置（HikariCP configuration）
+      hikari:
+        # 最大连接数（Maximum number of connections）
+        maximum-pool-size: 10
+        # 最小空闲连接数（Minimum idle connections）
+        minimum-idle: 2
+        # 连接超时时间（Connection timeout in milliseconds）
+        connection-timeout: 30000
+        # 空闲连接存活时间（Idle connection lifetime in milliseconds）
+        idle-timeout: 600000
+        # 最大生命周期（Maximum lifetime in milliseconds）
+        max-lifetime: 1800000
+      # MySQL自定义参数设置（MySQL custom parameter settings）
+      # 参数格式为：数据库设置项: 值 （Parameter format: database setting item: value）
+      # 示例（Example）：
+      # parameters:
+      #   useSSL: "false"
+      parameters: []
 
 # 服务器信息设置（Server info settings）
 server-info:
