@@ -30,7 +30,7 @@ import java.nio.file.Path;
 @Plugin(
         id = "v-monitor",
         name = "V-Monitor",
-        version = "1.3.0",
+        version = BuildConstants.VERSION,
         url = "https://github.com/MC-Nirvana/V-Monitor",
         description = "Monitor your Velocity Proxy player activity and server statistics.",
         authors = {

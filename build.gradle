@@ -1,61 +1,108 @@
+// ========== 项目基本配置 ==========
+
+// 插件配置
 plugins {
     id 'java'
-    id 'eclipse'
     id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.8'
     id("xyz.jpenilla.run-velocity") version "2.3.1"
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
-group = 'cn.nirvana'
-version = '1.3.0'
+// 项目基本信息
+group = findProperty('group')
+version = findProperty('version')
 
+// 仓库配置
 repositories {
+    // Maven 中央仓库
     mavenCentral()
+    //  Paper 仓库
     maven {
         name = "papermc-repo"
         url = "https://repo.papermc.io/repository/maven-public/"
     }
+    // Sonatype 仓库
     maven {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
 }
 
+// 依赖配置
 dependencies {
-    compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
-    annotationProcessor("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
-    compileOnly ("com.google.code.gson:gson:2.10.1")
-    implementation ("org.yaml:snakeyaml:2.2")
-    implementation("com.zaxxer:HikariCP:7.0.0")
+    compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT") // Velocity API
+    annotationProcessor("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT") // Velocity 注解
+    implementation ("org.yaml:snakeyaml:2.2") // SnakeYAML
+    implementation("com.zaxxer:HikariCP:5.0.1") // HikariCP
+    implementation("org.xerial:sqlite-jdbc:3.42.0.0") // SQLite JDBC
+    implementation("com.mysql:mysql-connector-j:8.0.33") // MySQL JDBC
 }
 
+// ========== 构建相关配置 ==========
+
+// 任务配置
 tasks {
+
+    // Velocity 运行配置
     runVelocity {
-        velocityVersion("3.4.0-SNAPSHOT")
+        velocityVersion(findProperty('velocityVersion'))
+    }
+
+    // ShadowJar 打包配置
+    shadowJar {
+        archiveBaseName.set('V-Monitor')
+        archiveClassifier.set('')
+        archiveVersion.set(project.version)
+        configurations = [project.configurations.runtimeClasspath]
+        relocate 'com.zaxxer.hikari', 'cn.nirvana.vMonitor.libs.hikari'
+    }
+
+    // 确保构建任务依赖 ShadowJar 任务
+    build {
+        dependsOn shadowJar
     }
 }
 
-def targetJavaVersion = 17
+// ========== Java 相关配置 ==========
+def targetJavaVersion = Integer.parseInt(findProperty('targetJavaVersion')) // Java版本配置
+
+// Java工具链配置
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
 }
 
+// Java编译器配置
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release.set(targetJavaVersion)
 }
 
-def templateSource = file('src/main/templates')
-def templateDest = layout.buildDirectory.dir('generated/sources/templates')
-def generateTemplates = tasks.register('generateTemplates', Copy) { task ->
-    def props = ['version': project.version]
-    task.inputs.properties props
+// ========== 模板生成配置 ==========
+def templateSource = file('src/main/templates') // 模板文件路径
+def templateDest = layout.buildDirectory.dir('generated/sources/templates/java') // 模板生成目标路径
 
-    task.from templateSource
-    task.into templateDest
-    task.expand props
+// 生成模板任务
+def generateTemplates = tasks.register('generateTemplates', Copy) {
+    def props = [
+            'version': project.version
+    ]
+    inputs.properties props
+
+    from templateSource
+    into templateDest
+    expand props
 }
 
-sourceSets.main.java.srcDir(generateTemplates.map { it.outputs })
+sourceSets.main.java.srcDir(generateTemplates.map { it.outputs }) // 添加模板生成任务到源代码目录
+compileJava.dependsOn(generateTemplates) // 确保编译任务依赖模板生成任务
 
-project.idea.project.settings.taskTriggers.afterSync generateTemplates
-project.eclipse.synchronizationTasks(generateTemplates)
+// ========== IDE 相关配置 ==========
+
+//IntelliJ IDEA 相关配置
+idea {
+    module {
+        sourceDirs += file('build/generated/sources/templates/java')
+    }
+}
+
+project.idea.project.settings.taskTriggers.afterSync generateTemplates // 在每次同步项目后生成模板

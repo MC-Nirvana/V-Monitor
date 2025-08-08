@@ -28,24 +28,27 @@ plugin-basic:
       username: "root"
       # MySQL数据库密码（MySQL database password）
       password: "password"
-      # HikariCP配置（HikariCP configuration）
-      hikari:
-        # 最大连接数（Maximum number of connections）
-        maximum-pool-size: 10
-        # 最小空闲连接数（Minimum idle connections）
-        minimum-idle: 2
-        # 连接超时时间（Connection timeout in milliseconds）
-        connection-timeout: 30000
-        # 空闲连接存活时间（Idle connection lifetime in milliseconds）
-        idle-timeout: 600000
-        # 最大生命周期（Maximum lifetime in milliseconds）
-        max-lifetime: 1800000
-      # MySQL自定义参数设置（MySQL custom parameter settings）
+      # MySQL自定义参数配置（MySQL custom parameter configuration）
       # 参数格式为：数据库设置项: 值 （Parameter format: database setting item: value）
       # 示例（Example）：
       # parameters:
       #   useSSL: "false"
       parameters: []
+    # HikariCP 数据库连接池配置（HikariCP database connection pool configuration）
+    hikari:
+      # 最大连接数（Maximum number of connections）
+      maximum-pool-size: 16
+      # 最小空闲连接数（Minimum idle connections）
+      minimum-idle: 2
+      # 连接超时时间（Connection timeout）
+      # 单位：毫秒（Unit: milliseconds）
+      connection-timeout: 30000
+      # 空闲连接存活时间（Idle connection lifetime）
+      # 单位：毫秒（Unit: milliseconds）
+      idle-timeout: 600000
+      # 最大生命周期（Maximum lifetime）
+      # 单位：毫秒（Unit: milliseconds）
+      max-lifetime: 1800000
 
 # 服务器信息设置（Server info settings）
 server-info:

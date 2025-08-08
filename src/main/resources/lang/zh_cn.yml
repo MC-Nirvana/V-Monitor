@@ -20,7 +20,7 @@ commands:
       
       <gold><bold>V-Monitor - V-监视器</bold></gold>
       <aqua>作者</aqua> <white>-</white> <green>MC-Nirvana</green>
-      <aqua>版本</aqua> <white>-</white> <green>1.3.0</green>
+      <aqua>版本</aqua> <white>-</white> <green>{plugin_version}</green>
       <aqua>/vm help</aqua> <white>-</white> <green>获取插件总帮助信息。</green>
 
   help:
