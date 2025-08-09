@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{server_name}} - 30天統計報表</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6200ee;
+            --primary-variant: #3700b3;
+            --secondary: #03dac6;
+            --background: #ffffff;
+            --surface: #ffffff;
+            --error: #b00020;
+            --on-primary: #ffffff;
+            --on-secondary: #000000;
+            --on-background: #000000;
+            --on-surface: #000000;
+            --on-error: #ffffff;
+            --text-primary: rgba(0, 0, 0, 0.87);
+            --text-secondary: rgba(0, 0, 0, 0.6);
+            --divider: rgba(0, 0, 0, 0.12);
+        }
+
+        .dark-mode {
+            --primary: #bb86fc;
+            --primary-variant: #3700b3;
+            --secondary: #03dac6;
+            --background: #121212;
+            --surface: #1e1e1e;
+            --error: #cf6679;
+            --on-primary: #000000;
+            --on-secondary: #000000;
+            --on-background: #ffffff;
+            --on-surface: #ffffff;
+            --on-error: #000000;
+            --text-primary: rgba(255, 255, 255, 0.87);
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --divider: rgba(255, 255, 255, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: var(--surface);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: 500;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--primary);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .card {
+            background-color: var(--surface);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--divider);
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .card-content {
+            padding: 24px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background-color: var(--surface);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .list {
+            list-style: none;
+        }
+
+        .list-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-theme {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--primary);
+            color: var(--on-primary);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<button class="toggle-theme" onclick="toggleTheme()">🌙</button>
+
+<div class="container">
+    <div class="header">
+        <h1 class="title">{{server_name}}</h1>
+        <p class="subtitle">30天統計報表（{{report_date_range}}）</p>
+    </div>
+
+    <!-- 趨勢分析 -->
+    <div class="section">
+        <h2 class="section-title">趨勢分析</h2>
+
+        <div class="card">
+            <div class="card-header">30天全服在線人數趨勢</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="overallOnlineTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">30天玩家遊玩時長趨勢</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="playtimeTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">30天伺服器全服在線人數趨勢</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="serverOnlineTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">30天伺服器各子服在線人數趨勢</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="subServerOnlineTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">DAU/MAU比率趨勢</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="dauMauRatioTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">30日新玩家留存率趨勢</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="retentionRateTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 數據概覽 -->
+    <div class="section">
+        <h2 class="section-title">數據概覽</h2>
+
+        <div class="card">
+            <div class="card-header">30天全服玩家數量概覽</div>
+            <div class="card-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">新玩家數量</div>
+                        <div class="stat-value" id="newPlayersCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">老玩家數量</div>
+                        <div class="stat-value" id="oldPlayersCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">30天總計玩家數量</div>
+                        <div class="stat-value" id="totalPlayersCount">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">玩家活躍度分析</div>
+            <div class="card-content">
+                <ul class="list">
+                    <li class="list-item">
+                        <strong>核心玩家數量（登錄15天以上）:</strong> <span id="corePlayersCount">0</span>人
+                    </li>
+                    <li class="list-item">
+                        <strong>流失風險玩家數量（連續7天未登錄）:</strong> <span id="atRiskPlayersCount">0</span>人
+                    </li>
+                    <li class="list-item">
+                        <strong>平均DAU（日活躍用戶數）:</strong> <span id="averageDAU">0</span>人
+                    </li>
+                    <li class="list-item">
+                        <strong>平均MAU（月活躍用戶數）:</strong> <span id="averageMAU">0</span>人
+                    </li>
+                    <li class="list-item">
+                        <strong>用戶粘性（DAU/MAU比率）:</strong> <span id="dauMauRatio">0</span>%
+                    </li>
+                    <li class="list-item">
+                        <strong>平均會話時長:</strong> <span id="averageSessionDuration">0</span>分鐘
+                    </li>
+                    <li class="list-item">
+                        <strong>玩家活躍度異常波動預警:</strong> <span id="activityFluctuationAlert">檢測到0次異常波動</span>
+                    </li>
+                    <li class="list-item">
+                        <strong>玩家流失預警:</strong> <span id="playerLossWarning">0名玩家有流失風險</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分佈分析 -->
+    <div class="section">
+        <h2 class="section-title">分佈分析</h2>
+
+        <div class="card">
+            <div class="card-header">玩家上線時間段的佔比（0-24小時）</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="hourlyDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">玩家登錄時間段的佔比（週一-週日）</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="weeklyDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">新老玩家的佔比</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="newOldPlayerDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">活躍玩家層級分佈（輕度/中度/重度活躍）</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="activityLevelDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">玩家生命週期分佈（新玩家/成長期/成熟期/沉默期）</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="lifecycleDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">玩家伺服器分佈（各伺服器在線人數佔比）</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="serverDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 排行榜 -->
+    <div class="section">
+        <h2 class="section-title">排行榜</h2>
+
+        <div class="card">
+            <div class="card-header">30天內最長在線玩家前三名</div>
+            <div class="card-content">
+                <ol class="list" id="topPlayersList">
+                    <li class="list-item">暫無數據</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">30天內玩家人數最多的三天</div>
+            <div class="card-content">
+                <ol class="list" id="topPlayerDaysList">
+                    <li class="list-item">暫無數據</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">最受歡迎的三個伺服器</div>
+            <div class="card-content">
+                <ol class="list" id="popularServersList">
+                    <li class="list-item">暫無數據</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 從模板中獲取報表數據
+    const reportData = {{report_data}};
+
+    // 主題切換功能
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        const button = document.querySelector('.toggle-theme');
+        if (document.body.classList.contains('dark-mode')) {
+            button.textContent = '☀️';
+        } else {
+            button.textContent = '🌙';
+        }
+    }
+
+    // 圖表渲染功能
+    document.addEventListener('DOMContentLoaded', function() {
+        // 填充文本統計數據
+        fillTextData();
+
+        // 渲染圖表
+        renderCharts();
+    });
+
+    function fillTextData() {
+        // 玩家統計數據
+        if (reportData.playerStats) {
+            document.getElementById('newPlayersCount').textContent = reportData.playerStats.new || 0;
+            document.getElementById('oldPlayersCount').textContent = reportData.playerStats.old || 0;
+            document.getElementById('totalPlayersCount').textContent = reportData.playerStats.total || 0;
+        }
+
+        // 玩家活躍度數據
+        if (reportData.playerActivity) {
+            document.getElementById('corePlayersCount').textContent = reportData.playerActivity.corePlayers || 0;
+            document.getElementById('atRiskPlayersCount').textContent = reportData.playerActivity.atRiskPlayers || 0;
+        }
+
+        // DAU數據
+        if (reportData.dauData) {
+            document.getElementById('averageDAU').textContent = Math.round(reportData.dauData.average) || 0;
+            // MAU和比率需要計算或從其他數據獲取
+            document.getElementById('averageMAU').textContent = 'N/A';
+            document.getElementById('dauMauRatio').textContent = 'N/A';
+        }
+
+        // 會話時長
+        document.getElementById('averageSessionDuration').textContent = 'N/A';
+
+        // 預警信息
+        document.getElementById('activityFluctuationAlert').textContent = '檢測到0次異常波動';
+        document.getElementById('playerLossWarning').textContent = '0名玩家有流失風險';
+
+        // 填充列表數據
+        fillListData();
+    }
+
+    function fillListData() {
+        // 最長在線時間的玩家TOP列表
+        if (reportData.topPlayers && reportData.topPlayers.length > 0) {
+            const topPlayersList = document.getElementById('topPlayersList');
+            topPlayersList.innerHTML = '';
+            reportData.topPlayers.forEach(player => {
+                const li = document.createElement('li');
+                li.className = 'list-item';
+                li.innerHTML = `<strong>${player.username}</strong> - 總時長: ${player.playTime} <a href="#">(查看詳情)</a>`;
+                topPlayersList.appendChild(li);
+            });
+        }
+
+        // 每日玩家數量最多的幾天
+        if (reportData.topPlayerDays) {
+            const topPlayerDaysList = document.getElementById('topPlayerDaysList');
+            topPlayerDaysList.innerHTML = '';
+            Object.entries(reportData.topPlayerDays).forEach(([date, count]) => {
+                const li = document.createElement('li');
+                li.className = 'list-item';
+                li.innerHTML = `<strong>${date}</strong> - 在線人數: ${count}人`;
+                topPlayerDaysList.appendChild(li);
+            });
+        }
+
+        // 最受歡迎的伺服器列表
+        if (reportData.popularServers && reportData.popularServers.length > 0) {
+            const popularServersList = document.getElementById('popularServersList');
+            popularServersList.innerHTML = '';
+            reportData.popularServers.forEach(server => {
+                const li = document.createElement('li');
+                li.className = 'list-item';
+                li.innerHTML = `<strong>${server.serverName}</strong> - 平均在線時長: ${server.avgPlayTimeMinutes}分鐘`;
+                popularServersList.appendChild(li);
+            });
+        }
+    }
+
+    function renderCharts() {
+        // 渲染每日峰值在線人數趨勢圖
+        if (reportData.dailyPeakOnline) {
+            const dates = Object.keys(reportData.dailyPeakOnline);
+            const values = Object.values(reportData.dailyPeakOnline);
+
+            const ctx = document.getElementById('overallOnlineTrendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: '在線人數',
+                        data: values,
+                        borderColor: '#6200ee',
+                        backgroundColor: 'rgba(98, 0, 238, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // 渲染玩家上線時間段分佈圖
+        if (reportData.hourlyDistribution) {
+            const hours = Object.keys(reportData.hourlyDistribution);
+            const counts = Object.values(reportData.hourlyDistribution);
+            const labels = hours.map(h => `${h}時-${(parseInt(h)+1)%24}時`);
+
+            const ctx = document.getElementById('hourlyDistributionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: hours.map((_, i) => `hsl(${i * 15}, 70%, 60%)`)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 渲染玩家登錄星期分佈圖
+        if (reportData.weeklyDistribution) {
+            const weekdays = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'];
+            const counts = [1, 2, 3, 4, 5, 6, 7].map(day => reportData.weeklyDistribution[day] || 0);
+
+            const ctx = document.getElementById('weeklyDistributionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: weekdays,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: [
+                            '#6200ee', '#3700b3', '#bb86fc',
+                            '#03dac6', '#018786', '#3700b3', '#6200ee'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 渲染新老玩家佔比圖
+        if (reportData.playerStats) {
+            const ctx = document.getElementById('newOldPlayerDistributionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['新玩家', '老玩家'],
+                    datasets: [{
+                        data: [reportData.playerStats.new || 0, reportData.playerStats.old || 0],
+                        backgroundColor: ['#6200ee', '#03dac6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 渲染伺服器分佈圖
+        if (reportData.serverDistribution) {
+            const servers = Object.keys(reportData.serverDistribution);
+            const counts = Object.values(reportData.serverDistribution);
+
+            const ctx = document.getElementById('serverDistributionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: servers,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: servers.map((_, i) => `hsl(${i * 60}, 70%, 60%)`)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 其他佔位圖表（需要實際數據支持）
+        renderPlaceholderChart('playtimeTrendChart', '玩家遊玩時長趨勢');
+        renderPlaceholderChart('serverOnlineTrendChart', '伺服器全服在線人數趨勢');
+        renderPlaceholderChart('subServerOnlineTrendChart', '各子服在線人數趨勢');
+        renderPlaceholderChart('dauMauRatioTrendChart', 'DAU/MAU比率趨勢');
+        renderPlaceholderChart('retentionRateTrendChart', '新玩家留存率趨勢');
+        renderPlaceholderChart('activityLevelDistributionChart', '活躍玩家層級分佈');
+        renderPlaceholderChart('lifecycleDistributionChart', '玩家生命週期分佈');
+    }
+
+    function renderPlaceholderChart(chartId, label) {
+        const ctx = document.getElementById(chartId).getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1日', '5日', '10日', '15日', '20日', '25日', '30日'],
+                datasets: [{
+                    label: label,
+                    data: [0, 0, 0, 0, 0, 0, 0],
+                    borderColor: '#bb86fc',
+                    backgroundColor: 'rgba(187, 134, 252, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

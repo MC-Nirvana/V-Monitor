@@ -6,10 +6,12 @@ import cn.nirvana.vMonitor.util.TimeUtil;
 import org.slf4j.Logger;
 
 import java.sql.*;
+
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -54,13 +56,12 @@ public class DataLoader {
 
             // 如果没有记录，则插入初始记录
             if (!hasRecord) {
-                // 根据数据库类型使用不同的插入语句
                 String insertSQL;
                 if (databaseUtil.getDatabaseType() == DatabaseUtil.DatabaseType.SQLITE) {
-                    insertSQL = "INSERT INTO server_info (startup_time, last_report_generation_time) VALUES (?, ?)";
+                    insertSQL = "INSERT INTO server_info (startup_time, last_report_generation_time) VALUES (?, NULL)";
                 } else {
                     // MySQL可以使用IGNORE来避免重复插入
-                    insertSQL = "INSERT IGNORE INTO server_info (startup_time, last_report_generation_time) VALUES (?, ?)";
+                    insertSQL = "INSERT IGNORE INTO server_info (startup_time, last_report_generation_time) VALUES (?, NULL)";
                 }
 
                 try (PreparedStatement insertStatement = connection.prepareStatement(insertSQL)) {
@@ -68,14 +69,51 @@ public class DataLoader {
                     // 使用DateConverter处理日期格式 (yyyy-mm-dd)
                     String dateStr = TimeUtil.DateConverter.fromTimestamp(currentTime);
                     insertStatement.setString(1, dateStr);
-                    insertStatement.setString(2, dateStr);
+                    // 不需要设置第二个参数，SQL中已经写了NULL
                     insertStatement.executeUpdate();
                 }
             }
         }
     }
 
+    /**
+     * 更新最后报表生成时间
+     */
+    public void updateLastReportGenerationTime() {
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "UPDATE server_info SET last_report_generation_time = ?")) {
 
+            long currentTime = TimeUtil.SystemTime.getCurrentTimestamp();
+            String dateStr = TimeUtil.DateConverter.fromTimestamp(currentTime);
+            statement.setString(1, dateStr);
+            statement.executeUpdate();
+
+            logger.info("Updated last report generation time to: {}", dateStr);
+        } catch (SQLException e) {
+            logger.error("Failed to update last report generation time: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 获取最后报表生成时间
+     *
+     * @return 最后报表生成时间，如果未生成过报表则返回null
+     */
+    public String getLastReportGenerationTime() {
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT last_report_generation_time FROM server_info LIMIT 1")) {
+
+            ResultSet rs = statement.executeQuery();
+            if (rs.next()) {
+                return rs.getString("last_report_generation_time");
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get last report generation time: {}", e.getMessage());
+        }
+        return null;
+    }
 
     /**
      * 获取服务器信息
@@ -713,6 +751,396 @@ public class DataLoader {
         }
     }
 
+    /**
+     * 获取指定日期范围内的每日峰值在线人数
+     *
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 日期到在线人数的映射
+     */
+    public Map<String, Integer> getDailyPeakOnlinePlayers(LocalDate startDate, LocalDate endDate) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT time, overall FROM daily_peak_online WHERE time BETWEEN ? AND ? ORDER BY time")) {
+
+            statement.setString(1, startDate.toString());
+            statement.setString(2, endDate.toString());
+
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                result.put(rs.getString("time"), rs.getInt("overall"));
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get daily peak online players: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * 获取服务器总玩家数量
+     *
+     * @return 玩家总数
+     */
+    public int getTotalPlayerCount() {
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT COUNT(*) FROM player_data")) {
+
+            ResultSet rs = statement.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get total player count: {}", e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * 获取指定日期范围内的新玩家数量
+     *
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 新玩家总数
+     */
+    public int getNewPlayerCount(LocalDate startDate, LocalDate endDate) {
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT SUM(overall) FROM daily_new_players WHERE time BETWEEN ? AND ?")) {
+
+            statement.setString(1, startDate.toString());
+            statement.setString(2, endDate.toString());
+
+            ResultSet rs = statement.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get new player count: {}", e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * 获取核心玩家数量（登录天数超过指定阈值的玩家）
+     *
+     * @param daysThreshold 天数阈值
+     * @return 核心玩家数量
+     */
+    public int getCorePlayerCount(int daysThreshold) {
+        try (Connection connection = databaseUtil.getConnection()) {
+            // 这里需要根据实际业务逻辑实现
+            // 简化实现：假设我们统计登录次数超过阈值的玩家
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM player_data WHERE play_time > ?")) {
+
+                // 假设阈值为15天，转换为秒数
+                int secondsThreshold = daysThreshold * 24 * 60 * 60;
+                statement.setString(1, TimeUtil.TimePeriodConverter.fromSeconds(secondsThreshold));
+
+                ResultSet rs = statement.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get core player count: {}", e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * 获取流失风险玩家数量（超过指定天数未登录的玩家）
+     *
+     * @param daysThreshold 天数阈值
+     * @return 流失风险玩家数量
+     */
+    public int getAtRiskPlayerCount(int daysThreshold) {
+        try (Connection connection = databaseUtil.getConnection()) {
+            LocalDate cutoffDate = LocalDate.now().minusDays(daysThreshold);
+            String cutoffDateTime = cutoffDate.atStartOfDay().toString();
+
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM player_data WHERE last_login_time < ?")) {
+
+                statement.setString(1, cutoffDateTime);
+
+                ResultSet rs = statement.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get at-risk player count: {}", e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * 获取平均DAU（日活跃用户数）
+     *
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 平均DAU
+     */
+    public double getAverageDAU(LocalDate startDate, LocalDate endDate) {
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT AVG(overall) FROM daily_peak_online WHERE time BETWEEN ? AND ?")) {
+
+            statement.setString(1, startDate.toString());
+            statement.setString(2, endDate.toString());
+
+            ResultSet rs = statement.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get average DAU: {}", e.getMessage());
+        }
+        return 0.0;
+    }
+
+    /**
+     * 获取服务器历史峰值在线人数
+     *
+     * @return 历史峰值在线人数
+     */
+    public int getHistoricalPeakOnline() {
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT historical_peak_online FROM server_tracking LIMIT 1")) {
+
+            ResultSet rs = statement.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("historical_peak_online");
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get historical peak online: {}", e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * 获取玩家上线时间段分布（按小时）
+     *
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 小时到玩家数量的映射
+     */
+    public Map<Integer, Integer> getHourlyPlayerDistribution(LocalDate startDate, LocalDate endDate) {
+        Map<Integer, Integer> hourlyData = new LinkedHashMap<>();
+
+        // 初始化24小时数据
+        for (int i = 0; i < 24; i++) {
+            hourlyData.put(i, 0);
+        }
+
+        try (Connection connection = databaseUtil.getConnection()) {
+            String sql;
+            if (databaseUtil.getDatabaseType() == DatabaseUtil.DatabaseType.SQLITE) {
+                sql = "SELECT strftime('%H', time) as hour, COUNT(*) as count FROM player_daily_server_paths " +
+                        "WHERE date(time) BETWEEN ? AND ? GROUP BY hour";
+            } else {
+                sql = "SELECT HOUR(time) as hour, COUNT(*) as count FROM player_daily_server_paths " +
+                        "WHERE DATE(time) BETWEEN ? AND ? GROUP BY hour";
+            }
+
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, startDate.toString());
+                statement.setString(2, endDate.toString());
+
+                ResultSet rs = statement.executeQuery();
+                while (rs.next()) {
+                    int hour = Integer.parseInt(rs.getString("hour"));
+                    int count = rs.getInt("count");
+                    hourlyData.put(hour, count);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get hourly player distribution: {}", e.getMessage());
+        }
+        return hourlyData;
+    }
+
+    /**
+     * 获取玩家登录星期分布
+     *
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 星期到玩家数量的映射（1=周一，7=周日）
+     */
+    public Map<Integer, Integer> getWeeklyPlayerDistribution(LocalDate startDate, LocalDate endDate) {
+        Map<Integer, Integer> weeklyData = new LinkedHashMap<>();
+
+        // 初始化7天数据
+        for (int i = 1; i <= 7; i++) {
+            weeklyData.put(i, 0);
+        }
+
+        try (Connection connection = databaseUtil.getConnection()) {
+            String sql;
+            if (databaseUtil.getDatabaseType() == DatabaseUtil.DatabaseType.SQLITE) {
+                sql = "SELECT strftime('%w', time) as day, COUNT(*) as count FROM player_daily_server_paths " +
+                        "WHERE date(time) BETWEEN ? AND ? GROUP BY day";
+            } else {
+                sql = "SELECT DAYOFWEEK(time) as day, COUNT(*) as count FROM player_daily_server_paths " +
+                        "WHERE DATE(time) BETWEEN ? AND ? GROUP BY day";
+            }
+
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, startDate.toString());
+                statement.setString(2, endDate.toString());
+
+                ResultSet rs = statement.executeQuery();
+                while (rs.next()) {
+                    int day = Integer.parseInt(rs.getString("day"));
+                    // 转换为1-7（周一到周日）
+                    int adjustedDay = day == 0 ? 7 : (day == 1 ? 7 : day - 1);
+                    if (databaseUtil.getDatabaseType() == DatabaseUtil.DatabaseType.MYSQL) {
+                        adjustedDay = day == 1 ? 7 : day - 1;
+                    }
+                    int count = rs.getInt("count");
+                    weeklyData.put(adjustedDay, count);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get weekly player distribution: {}", e.getMessage());
+        }
+        return weeklyData;
+    }
+
+    /**
+     * 获取服务器分布数据
+     *
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 服务器名称到玩家数量的映射
+     */
+    public Map<String, Integer> getServerDistribution(LocalDate startDate, LocalDate endDate) {
+        Map<String, Integer> serverData = new LinkedHashMap<>();
+
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT to_server, COUNT(DISTINCT uuid) as player_count FROM player_daily_server_paths " +
+                             "WHERE date(time) BETWEEN ? AND ? GROUP BY to_server ORDER BY player_count DESC")) {
+
+            statement.setString(1, startDate.toString());
+            statement.setString(2, endDate.toString());
+
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                String server = rs.getString("to_server");
+                int count = rs.getInt("player_count");
+                serverData.put(server, count);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get server distribution: {}", e.getMessage());
+        }
+        return serverData;
+    }
+
+    /**
+     * 获取最长在线时间的玩家TOP列表
+     *
+     * @param limit 返回记录数
+     * @return 玩家列表
+     */
+    public List<TopPlayerByPlayTime> getTopPlayersByPlayTime(int limit) {
+        List<TopPlayerByPlayTime> topPlayers = new ArrayList<>();
+
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT username, play_time FROM player_data ORDER BY play_time DESC LIMIT ?")) {
+
+            statement.setInt(1, limit);
+
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                TopPlayerByPlayTime player = new TopPlayerByPlayTime();
+                player.username = rs.getString("username");
+                player.playTime = rs.getString("play_time");
+                topPlayers.add(player);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get top players by play time: {}", e.getMessage());
+        }
+        return topPlayers;
+    }
+
+    /**
+     * 获取每日玩家数量最多的几天
+     *
+     * @param limit 返回记录数
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 日期到玩家数量的映射
+     */
+    public Map<String, Integer> getTopPlayerDays(int limit, LocalDate startDate, LocalDate endDate) {
+        Map<String, Integer> topDays = new LinkedHashMap<>();
+
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT time, overall FROM daily_peak_online WHERE time BETWEEN ? AND ? " +
+                             "ORDER BY overall DESC LIMIT ?")) {
+
+            statement.setString(1, startDate.toString());
+            statement.setString(2, endDate.toString());
+            statement.setInt(3, limit);
+
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                topDays.put(rs.getString("time"), rs.getInt("overall"));
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get top player days: {}", e.getMessage());
+        }
+        return topDays;
+    }
+
+    /**
+     * 获取最受欢迎的服务器列表
+     *
+     * @param limit 返回记录数
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 服务器信息列表
+     */
+    public List<PopularServer> getPopularServers(int limit, LocalDate startDate, LocalDate endDate) {
+        List<PopularServer> popularServers = new ArrayList<>();
+
+        try (Connection connection = databaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT to_server, COUNT(DISTINCT uuid) as player_count, " +
+                             "AVG(CAST(SUBSTR(play_time, 1, 2) AS INTEGER) * 3600 + " +
+                             "CAST(SUBSTR(play_time, 4, 2) AS INTEGER) * 60 + " +
+                             "CAST(SUBSTR(play_time, 7, 2) AS INTEGER)) as avg_seconds " +
+                             "FROM player_daily_server_paths psp " +
+                             "JOIN player_data pd ON psp.uuid = pd.uuid " +
+                             "WHERE date(psp.time) BETWEEN ? AND ? " +
+                             "GROUP BY to_server " +
+                             "ORDER BY player_count DESC LIMIT ?")) {
+
+            statement.setString(1, startDate.toString());
+            statement.setString(2, endDate.toString());
+            statement.setInt(3, limit);
+
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                PopularServer server = new PopularServer();
+                server.serverName = rs.getString("to_server");
+                server.playerCount = rs.getInt("player_count");
+                // 将秒数转换为分钟
+                server.avgPlayTimeMinutes = rs.getInt("avg_seconds") / 60;
+                popularServers.add(server);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get popular servers: {}", e.getMessage());
+        }
+        return popularServers;
+    }
+
     // 数据类定义
     public static class PlayerData {
         public int id;
@@ -744,5 +1172,16 @@ public class DataLoader {
             this.from = "";
             this.to = "";
         }
+    }
+
+    public static class TopPlayerByPlayTime {
+        public String username;
+        public String playTime;
+    }
+
+    public static class PopularServer {
+        public String serverName;
+        public int playerCount;
+        public int avgPlayTimeMinutes;
     }
 }

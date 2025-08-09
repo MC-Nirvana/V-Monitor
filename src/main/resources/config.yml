@@ -62,3 +62,19 @@ server-info:
   #   lobby: "hub"
   #   game: "minigames"
   aliases: []
+
+# 报告设置 (Report settings)
+report:
+  # 是否启用报告功能（Enable report feature）
+  # 如果启用，报告将在指定时间自动生成（If enabled, reports will be generated automatically at the specified time）
+  enabled: true
+  # 是否自动清理报告（Auto clean report）
+  auto-clean-report: true
+  # 输出目录（Output directory）
+  output-directory: "Reports"
+  # 报告生成时间（Report generation time）
+  # 格式为 HH:mm（Format is HH:mm）
+  # 注意：时间应为24小时制（Note: Time should be in 24-hour format）
+  # 示例：每天下午4点生成报告（Example: Generate report every day at 4 PM）
+  # schedule-time: "16:00"
+  schedule-time: "16:00"

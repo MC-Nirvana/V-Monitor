@@ -3,6 +3,7 @@ package cn.nirvana.vMonitor;
 import cn.nirvana.vMonitor.command.*;
 import cn.nirvana.vMonitor.command_module.*;
 import cn.nirvana.vMonitor.exceptions.*;
+import cn.nirvana.vMonitor.functional_module.*;
 import cn.nirvana.vMonitor.listener.*;
 import cn.nirvana.vMonitor.loader.*;
 import cn.nirvana.vMonitor.util.*;
@@ -49,6 +50,9 @@ public class VMonitor {
     private DataLoader dataLoader;
     private FileUtil fileUtil;
     private DatabaseUtil databaseUtil;
+
+    // 添加 ReportModule 实例
+    private ReportModule reportModule;
 
     private MiniMessage miniMessage;
 
@@ -191,6 +195,10 @@ public class VMonitor {
         new VersionCommand(commandUtil, new VersionModule(languageLoader, miniMessage));
         commandUtil.registerAllCommands();
 
+        // 初始化并启动报表模块
+        this.reportModule = new ReportModule(logger, configLoader, dataLoader, dataDirectory);
+        reportModule.start();
+
         logger.info("V-Monitor plugin enabled!");
     }
 
@@ -199,6 +207,11 @@ public class VMonitor {
     public void onProxyShutdown(ProxyShutdownEvent event) {
         // 在关服时执行数据保存操作，确保所有玩家数据和统计信息都已持久化
         logger.info("V-Monitor plugin is shutting down...");
+
+        // 停止报表模块
+        if (reportModule != null) {
+            reportModule.stop();
+        }
 
         if (databaseUtil != null) {
             databaseUtil.close();
@@ -233,5 +246,10 @@ public class VMonitor {
 
     public MiniMessage getMiniMessage() {
         return miniMessage;
+    }
+
+    // 添加 ReportModule 的访问器
+    public ReportModule getReportModule() {
+        return reportModule;
     }
 }

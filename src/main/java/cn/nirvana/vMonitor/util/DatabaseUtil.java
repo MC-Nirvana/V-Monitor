@@ -1,16 +1,20 @@
 package cn.nirvana.vMonitor.util;
 
 import cn.nirvana.vMonitor.loader.ConfigLoader;
+
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+
 import java.util.Map;
 
 /**
@@ -179,7 +183,7 @@ public class DatabaseUtil {
         executeStatement(connection, "CREATE TABLE IF NOT EXISTS server_info (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "startup_time TEXT NOT NULL, " +  // yyyy-mm-dd格式
-                "last_report_generation_time TEXT NOT NULL" +  // yyyy-mm-dd格式
+                "last_report_generation_time TEXT" +  // 允许为NULL，yyyy-mm-dd格式
                 ")");
 
         // server_tracking 表 - 存储历史峰值在线数据
@@ -252,7 +256,7 @@ public class DatabaseUtil {
         executeStatement(connection, "CREATE TABLE IF NOT EXISTS server_info (" +
                 "id INTEGER PRIMARY KEY AUTO_INCREMENT, " +
                 "startup_time DATE NOT NULL, " +  // yyyy-mm-dd格式
-                "last_report_generation_time DATE NOT NULL" +  // yyyy-mm-dd格式
+                "last_report_generation_time DATE" +  // 允许为NULL，yyyy-mm-dd格式
                 ")");
 
         // server_tracking 表 - 存储历史峰值在线数据

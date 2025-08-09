@@ -229,6 +229,24 @@ public class ConfigLoader {
         return getLong("plugin-basic.data-storage.hikari.max-lifetime");
     }
 
+    // 报告设置相关配置获取方法
+
+    public boolean isReportEnabled() {
+        return getBoolean("report.enabled");
+    }
+
+    public boolean isAutoCleanReport() {
+        return getBoolean("report.auto-clean-report");
+    }
+
+    public String getReportOutputDirectory() {
+        return getString("report.output-directory");
+    }
+
+    public String getReportScheduleTime() {
+        return getString("report.schedule-time");
+    }
+
     public static class ConfigLoadException extends RuntimeException {
         public ConfigLoadException(String message) {
             super(message);
