@@ -109,20 +109,40 @@ public class ConfigLoader {
         return null;
     }
 
-    public String getString(String key, String defaultValue) {
-        String value = getString(key);
-        return value != null ? value : defaultValue;
-    }
-
-    public boolean getBoolean(String key, boolean defaultValue) {
+    public boolean getBoolean(String key) {
         if (config == null) {
-            return defaultValue;
+            return false;
         }
         Object value = getNestedValue(key);
         if (value instanceof Boolean) {
             return (boolean) value;
         }
-        return defaultValue;
+        return false;
+    }
+
+    public int getInt(String key) {
+        if (config == null) {
+            return 0;
+        }
+        Object value = getNestedValue(key);
+        if (value instanceof Integer) {
+            return (int) value;
+        }
+        return 0;
+    }
+
+    public long getLong(String key) {
+        if (config == null) {
+            return 0L;
+        }
+        Object value = getNestedValue(key);
+        if (value instanceof Integer) {
+            return (int) value;
+        }
+        if (value instanceof Long) {
+            return (long) value;
+        }
+        return 0L;
     }
 
     @SuppressWarnings("unchecked")
@@ -143,6 +163,70 @@ public class ConfigLoader {
 
     public String getServerName() {
         return getString("server-info.name");
+    }
+
+    // 数据库相关配置获取方法
+
+    public String getDatabaseType() {
+        return getString("plugin-basic.data-storage.type");
+    }
+
+    public String getSQLitePath() {
+        return getString("plugin-basic.data-storage.sqlite.path");
+    }
+
+    public String getMySQLHost() {
+        return getString("plugin-basic.data-storage.mysql.host");
+    }
+
+    public int getMySQLPort() {
+        return getInt("plugin-basic.data-storage.mysql.port");
+    }
+
+    public String getMySQLDatabase() {
+        return getString("plugin-basic.data-storage.mysql.database");
+    }
+
+    public String getMySQLUsername() {
+        return getString("plugin-basic.data-storage.mysql.username");
+    }
+
+    public String getMySQLPassword() {
+        return getString("plugin-basic.data-storage.mysql.password");
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, String> getMySQLParameters() {
+        Map<String, Object> parametersSection = getTable("plugin-basic.data-storage.mysql.parameters");
+        if (parametersSection != null) {
+            Map<String, String> parameters = new HashMap<>();
+            for (Map.Entry<String, Object> entry : parametersSection.entrySet()) {
+                parameters.put(entry.getKey(), String.valueOf(entry.getValue()));
+            }
+            return parameters;
+        }
+        return new HashMap<>();
+    }
+
+    // HikariCP 配置获取方法
+    public int getHikariMaximumPoolSize() {
+        return getInt("plugin-basic.data-storage.hikari.maximum-pool-size");
+    }
+
+    public int getHikariMinimumIdle() {
+        return getInt("plugin-basic.data-storage.hikari.minimum-idle");
+    }
+
+    public long getHikariConnectionTimeout() {
+        return getLong("plugin-basic.data-storage.hikari.connection-timeout");
+    }
+
+    public long getHikariIdleTimeout() {
+        return getLong("plugin-basic.data-storage.hikari.idle-timeout");
+    }
+
+    public long getHikariMaxLifetime() {
+        return getLong("plugin-basic.data-storage.hikari.max-lifetime");
     }
 
     public static class ConfigLoadException extends RuntimeException {

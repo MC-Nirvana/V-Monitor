@@ -2,15 +2,13 @@ package cn.nirvana.vMonitor.command_module;
 
 import cn.nirvana.vMonitor.loader.DataLoader;
 import cn.nirvana.vMonitor.loader.LanguageLoader;
+import cn.nirvana.vMonitor.util.TimeUtil;
 
 import com.velocitypowered.api.command.CommandSource;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -28,16 +26,7 @@ public class PlayerSwitchModule {
 
     public void executePlayerSwitch(CommandSource source, String playerName) {
         // 查找玩家数据
-        DataLoader.RootData rootData = dataLoader.getRootData();
-        DataLoader.PlayerData playerData = null;
-
-        // 遍历所有玩家数据查找匹配的玩家名
-        for (DataLoader.PlayerData player : rootData.playerData) {
-            if (player.username.equalsIgnoreCase(playerName)) {
-                playerData = player;
-                break;
-            }
-        }
+        DataLoader.PlayerData playerData = dataLoader.getPlayerDataByName(playerName);
 
         // 如果未找到玩家数据
         if (playerData == null) {
@@ -59,14 +48,14 @@ public class PlayerSwitchModule {
 
         // 遍历玩家的所有服务器路径日志
         for (Map.Entry<String, List<DataLoader.ServerPathData>> entry : playerData.dailyServerPaths.entrySet()) {
-            String date = entry.getKey();
             List<DataLoader.ServerPathData> paths = entry.getValue();
 
             if (!paths.isEmpty()) {
                 hasLogs = true;
                 for (DataLoader.ServerPathData path : paths) {
                     // 将时间转换为 ISO8601 标准格式
-                    String iso8601Time = convertToISO8601(date, path.time);
+                    String iso8601Time = TimeUtil.DateTimeConverter.fromTimestamp(
+                            path.time.atZone(ZoneId.systemDefault()).toEpochSecond());
 
                     // 只替换新的 ISO8601 格式占位符
                     String entryMessage = switchLogEntryFormat
@@ -90,18 +79,5 @@ public class PlayerSwitchModule {
                 .replace("{switch_log}", switchLogBuilder.toString().trim());
 
         source.sendMessage(miniMessage.deserialize(finalMessage));
-    }
-
-    /**
-     * 将日期和时间转换为 ISO8601 标准格式
-     * @param date 日期 (yyyy-MM-dd)
-     * @param time 时间 (HH:mm:ss)
-     * @return ISO8601 格式的时间戳
-     */
-    private String convertToISO8601(String date, String time) {
-        LocalDate localDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        LocalTime localTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("HH:mm:ss"));
-        ZonedDateTime zonedDateTime = ZonedDateTime.of(localDate, localTime, ZoneId.systemDefault());
-        return zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 }

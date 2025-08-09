@@ -22,6 +22,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,7 +47,8 @@ public class VMonitor {
     private ConfigLoader configLoader;
     private LanguageLoader languageLoader;
     private DataLoader dataLoader;
-    private FileUtil fileUtil; // 新增 FileUtil 实例
+    private FileUtil fileUtil;
+    private DatabaseUtil databaseUtil;
 
     private MiniMessage miniMessage;
 
@@ -79,7 +81,6 @@ public class VMonitor {
                 logger.info("Data directory and lang subdirectory created.");
                 fileUtil.releaseConfigFile();
                 fileUtil.releaseLanguageFiles();
-                fileUtil.releaseDataFile();
             } catch (IOException e) {
                 logger.error("Failed to create directories or release default files: {}", e.getMessage());
                 throw new RuntimeException("Critical error during plugin initialization.", e);
@@ -104,11 +105,9 @@ public class VMonitor {
         // 初始化 loader
         this.configLoader = new ConfigLoader(logger, dataDirectory);
         this.languageLoader = new LanguageLoader(logger, dataDirectory, configLoader);
-        this.dataLoader = new DataLoader(logger, dataDirectory);
 
         // 文件路径（延迟构造 langPath）
         Path configPath = dataDirectory.resolve("config.yml");
-        Path dataPath = dataDirectory.resolve("data.json");
 
         // 1. 校验并加载 config.yml
         try {
@@ -127,7 +126,21 @@ public class VMonitor {
             }
         }
 
-        // 2. 构造 langPath 并加载语言文件
+        // 2. 初始化数据库
+        try {
+            // 传入数据目录路径到 DatabaseUtil
+            this.databaseUtil = new DatabaseUtil(logger, configLoader, dataDirectory);
+            databaseUtil.initialize();
+            logger.info("Database initialized successfully.");
+        } catch (SQLException e) {
+            logger.error("Failed to initialize database: {}", e.getMessage());
+            throw new RuntimeException("Critical database error. Plugin cannot start.", e);
+        }
+        this.dataLoader = new DataLoader(logger, databaseUtil);
+        dataLoader.initializeData();
+
+
+        // 3. 构造 langPath 并加载语言文件
         String langKey = configLoader.getLanguageKey();
         if (langKey == null || langKey.isEmpty()) {
             logger.error("Language key is missing or empty. This should not happen in production.");
@@ -149,23 +162,6 @@ public class VMonitor {
             } catch (FileException repairException) {
                 logger.error("Failed to repair language file: {}", repairException.getMessage());
                 throw new RuntimeException("Critical language file error. Plugin cannot start.", repairException);
-            }
-        }
-
-        // 3. 校验并加载 data.json
-        try {
-            fileUtil.verifyFile(dataPath, "data");
-            fileUtil.loadFile(dataPath, "Data", dataLoader, dataLoader::loadData);
-        } catch (FileException e) {
-            logger.error("Data file verification or loading failed: {}", e.getMessage());
-            try {
-                logger.warn("Repairing data.json...");
-                fileUtil.repairFile(dataPath, "data.json", "data");
-                fileUtil.verifyFile(dataPath, "data");
-                fileUtil.loadFile(dataPath, "Data", dataLoader, dataLoader::loadData);
-            } catch (FileException repairException) {
-                logger.error("Failed to repair data file: {}", repairException.getMessage());
-                throw new RuntimeException("Critical data file error. Plugin cannot start.", repairException);
             }
         }
 
@@ -195,9 +191,6 @@ public class VMonitor {
         new VersionCommand(commandUtil, new VersionModule(languageLoader, miniMessage));
         commandUtil.registerAllCommands();
 
-        // 保存数据文件
-        dataLoader.savePlayerData();
-
         logger.info("V-Monitor plugin enabled!");
     }
 
@@ -205,13 +198,15 @@ public class VMonitor {
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
         // 在关服时执行数据保存操作，确保所有玩家数据和统计信息都已持久化
-        logger.info("V-Monitor plugin is shutting down. Saving player data...");
-        if (dataLoader != null) {
-            dataLoader.savePlayerData();
-            logger.info("Player data saved successfully.");
+        logger.info("V-Monitor plugin is shutting down...");
+
+        if (databaseUtil != null) {
+            databaseUtil.close();
+            logger.info("Database connection closed.");
         } else {
-            logger.warn("DataLoader was not initialized. Player data may not have been saved.");
+            logger.warn("DatabaseUtil was not initialized.");
         }
+
         logger.info("V-Monitor plugin disabled.");
     }
 

@@ -19,6 +19,7 @@ import com.velocitypowered.api.command.CommandSource;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.List;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
@@ -100,11 +101,8 @@ public class PlayerCommand {
         @Override
         public CompletableFuture<Suggestions> getSuggestions(CommandContext<CommandSource> context, SuggestionsBuilder builder) {
             String remaining = builder.getRemaining().toLowerCase();
-
-            // 从数据文件中获取所有玩家名称并进行过滤
-            DataLoader.RootData rootData = dataLoader.getRootData();
-            for (DataLoader.PlayerData player : rootData.playerData) {
-                String playerName = player.username;
+            List<String> playerNames = dataLoader.getAllPlayerNames();
+            for (String playerName : playerNames) {
                 if (playerName.toLowerCase().startsWith(remaining)) {
                     builder.suggest(playerName);
                 }

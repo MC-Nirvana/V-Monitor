@@ -21,16 +21,7 @@ public class PlayerInfoModule {
 
     public void executePlayerInfo(CommandSource source, String playerName) {
         // 查找玩家数据
-        DataLoader.RootData rootData = dataLoader.getRootData();
-        DataLoader.PlayerData playerData = null;
-
-        // 遍历所有玩家数据查找匹配的玩家名
-        for (DataLoader.PlayerData player : rootData.playerData) {
-            if (player.username.equalsIgnoreCase(playerName)) {
-                playerData = player;
-                break;
-            }
-        }
+        DataLoader.PlayerData playerData = dataLoader.getPlayerDataByName(playerName);
 
         // 如果未找到玩家数据
         if (playerData == null) {
@@ -48,8 +39,10 @@ public class PlayerInfoModule {
                 .replace("{player_id}", String.valueOf(playerData.id))
                 .replace("{uuid}", playerData.uuid.toString())
                 .replace("{player_name}", playerData.username)
-                .replace("{first_join_time}", playerData.firstJoinTime)
-                .replace("{last_login_time}", playerData.lastLoginTime)
+                .replace("{first_join_time}", TimeUtil.DateTimeConverter.fromTimestamp(
+                        playerData.firstJoinTime.atZone(java.time.ZoneId.systemDefault()).toEpochSecond()))
+                .replace("{last_login_time}", TimeUtil.DateTimeConverter.fromTimestamp(
+                        playerData.lastLoginTime.atZone(java.time.ZoneId.systemDefault()).toEpochSecond()))
                 .replace("{total_play_time}", TimeUtil.TimePeriodConverter.fromSeconds(playerData.playTime));
 
         source.sendMessage(miniMessage.deserialize(formattedMessage));

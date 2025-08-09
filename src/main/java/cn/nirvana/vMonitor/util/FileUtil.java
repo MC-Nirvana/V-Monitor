@@ -104,19 +104,24 @@ public class FileUtil {
             throw new FileException("Failed to read " + fileType + " file '" + targetFilePath.getFileName() + "': " + e.getMessage(), e);
         } catch (YAMLException e) {
             throw new FileException("Invalid YAML syntax in " + fileType + " file '" + targetFilePath.getFileName() + "': " + e.getMessage(), e);
-        } catch (JsonSyntaxException e) {
-            throw new FileException("Invalid JSON syntax in " + fileType + " file '" + targetFilePath.getFileName() + "': " + e.getMessage(), e);
         } catch (Exception e) {
             throw new FileException("An unexpected error occurred while loading " + fileType + " file '" + targetFilePath.getFileName() + "': " + e.getMessage(), e);
         }
     }
 
-    // ✅ 释放方法（保持不变）
+    /**
+     * 释放资源文件。
+     *
+     * @return 如果成功释放，返回 true；否则返回 false。
+     */
+
+    // 释放配置文件
     public boolean releaseConfigFile() {
         Path configPath = dataDirectory.resolve("config.yml");
         return ensureFileExists(configPath, "config.yml", "config");
     }
 
+    // 释放语言文件
     public boolean releaseLanguageFiles() {
         boolean success = true;
         String[] languages = {"zh_cn.yml", "zh_tw.yml", "en_us.yml"};
@@ -127,20 +132,6 @@ public class FileUtil {
             success = success && result;
         }
 
-        return success;
-    }
-
-    public boolean releaseDataFile() {
-        Path dataPath = dataDirectory.resolve("data.json");
-        return ensureFileExists(dataPath, "data.json", "data");
-    }
-
-    // ✅ 可选：一次性释放所有文件
-    public boolean releaseAllFiles() {
-        boolean success = true;
-        success &= releaseConfigFile();
-        success &= releaseLanguageFiles();
-        success &= releaseDataFile();
         return success;
     }
 
@@ -160,7 +151,7 @@ public class FileUtil {
             if (Files.exists(filePath)) {
                 // 生成带时间戳的备份文件名
                 String backupFileName = filePath.getFileName() + "." +
-                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")) + ".error";
+                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-ddTHH-mm-ssXXX")) + ".error";
                 Path backupPath = filePath.resolveSibling(backupFileName);
 
                 // 重命名损坏文件

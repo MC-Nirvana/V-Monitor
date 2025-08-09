@@ -3,6 +3,7 @@ package cn.nirvana.vMonitor.command_module;
 import cn.nirvana.vMonitor.VMonitor;
 import cn.nirvana.vMonitor.loader.ConfigLoader;
 import cn.nirvana.vMonitor.loader.LanguageLoader;
+import cn.nirvana.vMonitor.loader.DataLoader;
 import cn.nirvana.vMonitor.util.TimeUtil;
 
 import com.velocitypowered.api.command.CommandSource;
@@ -136,8 +137,9 @@ public class ServerInfoModule {
                     String serverUptime = languageLoader.getMessage("global.unknown_info");
 
                     try {
-                        // 从DataFileLoader获取开服时间
-                        String bootTime = plugin.getPlayerDataLoader().getRootData().serverInfo.startupTime;
+                        // 从DataLoader获取开服时间
+                        DataLoader.ServerInfoData serverInfo = plugin.getPlayerDataLoader().getServerInfo();
+                        String bootTime = serverInfo.startupTime;
                         if (bootTime != null && !bootTime.isEmpty()) {
                             serverStartTime = bootTime;
 

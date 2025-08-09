@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.Optional;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class PlayerActivityListener {
     private final ProxyServer proxyServer;
@@ -38,6 +39,9 @@ public class PlayerActivityListener {
     private final Map<UUID, LocalDateTime> playerLoginTimes; // 存储玩家登录时间
     private final Map<UUID, String> playerCurrentServers; //存储玩家当前所在的服务器名称
 
+    // 为每个玩家添加锁，防止并发更新冲突
+    private final Map<UUID, ReentrantLock> playerLocks = new ConcurrentHashMap<>();
+
     public PlayerActivityListener(ProxyServer proxyServer, ConfigLoader configLoader,
                                   LanguageLoader languageLoader, DataLoader dataLoader,
                                   MiniMessage miniMessage, VMonitor plugin, Logger logger) {
@@ -49,7 +53,10 @@ public class PlayerActivityListener {
         this.plugin = plugin;
         this.logger = logger;
         this.playerLoginTimes = new ConcurrentHashMap<>();
-        this.playerCurrentServers = new ConcurrentHashMap<>(); // 初始化新的 Map
+        this.playerCurrentServers = new ConcurrentHashMap<>();
+
+        // 启动定时更新任务（每2分钟）
+        startPeriodicPlayTimeUpdate();
     }
 
     /**
@@ -93,7 +100,7 @@ public class PlayerActivityListener {
         // 记录玩家当前连接的服务器
         playerCurrentServers.put(uuid, serverName);
 
-        // 更新玩家数据
+        // 更新玩家数据（确保传递玩家名）
         dataLoader.updatePlayerOnLogin(uuid, playerName);
 
         // 更新历史峰值在线人数
@@ -107,11 +114,10 @@ public class PlayerActivityListener {
         // 处理玩家首次连接的情况
         Optional<RegisteredServer> previousServer = event.getPreviousServer();
         if (!previousServer.isPresent()) {
-            // 如果没有前一个服务器，说明是首次连接，需要记录路径
-            dataLoader.updatePlayerServerLogin(uuid, serverName);
+            // 如果没有前一个服务器，说明是首次连接，需要记录路径（from_server 为 "external"）
+            dataLoader.updatePlayerServerLogin(uuid, "external", serverName);
         }
     }
-
 
 
     /**
@@ -149,6 +155,9 @@ public class PlayerActivityListener {
         // 获取玩家最后所在的服务器名称，并从 Map 中移除
         String disconnectedServerName = playerCurrentServers.remove(uuid);
 
+        // 移除玩家锁
+        playerLocks.remove(uuid);
+
         Duration sessionDuration = Duration.ZERO;
         if (loginTime != null) {
             sessionDuration = Duration.between(loginTime, LocalDateTime.now());
@@ -185,7 +194,6 @@ public class PlayerActivityListener {
         }
     }
 
-
     /**
      * 当玩家切换服务器连接完成时更新数据。
      *
@@ -195,20 +203,79 @@ public class PlayerActivityListener {
     public void onServerSwitchConnected(ServerConnectedEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
+        String playerName = player.getUsername();
         String serverName = event.getServer().getServerInfo().getName(); // 获取目标服务器名称
 
         Optional<RegisteredServer> previousServer = event.getPreviousServer();
         if (previousServer.isPresent()) {
-            // 只有在玩家切换服务器时才更新服务器登录数据
-            dataLoader.updatePlayerServerLogin(uuid, serverName);
+            // 使用同步锁确保数据一致性
+            ReentrantLock lock = playerLocks.computeIfAbsent(uuid, k -> new ReentrantLock());
+            lock.lock();
+            try {
+                // 更新玩家会话时间
+                updatePlayerSessionTime(uuid);
 
-            // 更新历史峰值在线人数
-            int currentOnlineCount = proxyServer.getPlayerCount();
-            dataLoader.updateHistoricalPeakOnline(currentOnlineCount);
+                // 更新服务器登录数据（明确指定 from_server）
+                String fromServer = previousServer.get().getServerInfo().getName();
+                dataLoader.updatePlayerServerLogin(uuid, fromServer, serverName);
 
-            // 更新子服务器峰值在线人数
-            int serverOnlineCount = event.getServer().getPlayersConnected().size() + 1; // +1是因为玩家即将连接
-            dataLoader.updateSubServerPeakOnline(serverName, serverOnlineCount);
+                // 更新历史峰值在线人数
+                int currentOnlineCount = proxyServer.getPlayerCount();
+                dataLoader.updateHistoricalPeakOnline(currentOnlineCount);
+
+                // 更新子服务器峰值在线人数
+                int serverOnlineCount = event.getServer().getPlayersConnected().size();
+                dataLoader.updateSubServerPeakOnline(serverName, serverOnlineCount);
+            } finally {
+                lock.unlock();
+            }
+        }
+    }
+
+    /**
+     * 启动定时更新任务
+     */
+    private void startPeriodicPlayTimeUpdate() {
+        plugin.getProxyServer().getScheduler().buildTask(plugin, this::updateAllPlayersPlayTime)
+                .delay(2, TimeUnit.MINUTES)
+                .repeat(2, TimeUnit.MINUTES)
+                .schedule();
+    }
+
+    /**
+     * 更新所有在线玩家的游戏时间
+     */
+    private void updateAllPlayersPlayTime() {
+        try {
+            for (Player player : plugin.getProxyServer().getAllPlayers()) {
+                UUID uuid = player.getUniqueId();
+
+                // 使用同步锁确保数据一致性
+                ReentrantLock lock = playerLocks.computeIfAbsent(uuid, k -> new ReentrantLock());
+                lock.lock();
+                try {
+                    updatePlayerSessionTime(uuid);
+                } finally {
+                    lock.unlock();
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to update periodic play time: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 更新单个玩家的会话时间
+     *
+     * @param uuid 玩家UUID
+     */
+    private void updatePlayerSessionTime(UUID uuid) {
+        LocalDateTime sessionStart = playerLoginTimes.get(uuid);
+        if (sessionStart != null) {
+            Duration sessionDuration = Duration.between(sessionStart, LocalDateTime.now());
+            dataLoader.incrementPlayerPlayTime(uuid, sessionDuration);
+            // 重置会话开始时间为当前时间
+            playerLoginTimes.put(uuid, LocalDateTime.now());
         }
     }
 
