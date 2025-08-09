@@ -1,6 +1,6 @@
 package cn.nirvana.vMonitor;
 
-// The constants are replaced before compilation
+// 构建时自动生成版本号
 public class BuildConstants {
 
     public static final String VERSION = "${version}";

@@ -1,6 +1,6 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 import cn.nirvana.vMonitor.command_module.PluginInfoModule;
 import cn.nirvana.vMonitor.command_module.PluginListModule;
 import cn.nirvana.vMonitor.util.CommandUtil;
@@ -26,19 +26,19 @@ import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 public class PluginCommand {
     private final CommandUtil commandUtil;
     private final ProxyServer proxyServer;
-    private final LanguageFileLoader languageFileLoader;
+    private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
     private final PluginListModule pluginListModule;
     private final PluginInfoModule pluginInfoModule;
     private final HelpModule helpModule;
 
     public PluginCommand(CommandUtil commandUtil, ProxyServer proxyServer,
-                         LanguageFileLoader languageFileLoader, MiniMessage miniMessage,
+                         LanguageLoader languageLoader, MiniMessage miniMessage,
                          PluginListModule pluginListModule, PluginInfoModule pluginInfoModule,
                          HelpModule helpModule) {
         this.commandUtil = commandUtil;
         this.proxyServer = proxyServer;
-        this.languageFileLoader = languageFileLoader;
+        this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
         this.pluginListModule = pluginListModule;
         this.pluginInfoModule = pluginInfoModule;
@@ -64,7 +64,7 @@ public class PluginCommand {
                             // 修改此处：不直接执行 executePluginInfoAll
                             .executes(context -> {
                                 // 提示用法
-                                String usage = languageFileLoader.getMessage("commands.plugin.usage.info");
+                                String usage = languageLoader.getMessage("commands.plugin.usage.info");
                                 context.getSource().sendMessage(miniMessage.deserialize(usage));
                                 return SINGLE_SUCCESS;
                             })

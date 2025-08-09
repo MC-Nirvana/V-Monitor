@@ -1,8 +1,8 @@
 package cn.nirvana.vMonitor.listener;
 
-import cn.nirvana.vMonitor.loader.ConfigFileLoader;
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
-import cn.nirvana.vMonitor.loader.DataFileLoader;
+import cn.nirvana.vMonitor.loader.ConfigLoader;
+import cn.nirvana.vMonitor.loader.DataLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 import cn.nirvana.vMonitor.VMonitor;
 
 import com.velocitypowered.api.event.Subscribe;
@@ -29,22 +29,22 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerActivityListener {
     private final ProxyServer proxyServer;
-    private final ConfigFileLoader configFileLoader;
-    private final LanguageFileLoader languageFileLoader;
-    private final DataFileLoader dataFileLoader;
+    private final ConfigLoader configLoader;
+    private final LanguageLoader languageLoader;
+    private final DataLoader dataLoader;
     private final MiniMessage miniMessage;
     private final VMonitor plugin;
     private final Logger logger;
     private final Map<UUID, LocalDateTime> playerLoginTimes; // 存储玩家登录时间
     private final Map<UUID, String> playerCurrentServers; //存储玩家当前所在的服务器名称
 
-    public PlayerActivityListener(ProxyServer proxyServer, ConfigFileLoader configFileLoader,
-                                  LanguageFileLoader languageFileLoader, DataFileLoader dataFileLoader,
+    public PlayerActivityListener(ProxyServer proxyServer, ConfigLoader configLoader,
+                                  LanguageLoader languageLoader, DataLoader dataLoader,
                                   MiniMessage miniMessage, VMonitor plugin, Logger logger) {
         this.proxyServer = proxyServer;
-        this.configFileLoader = configFileLoader;
-        this.languageFileLoader = languageFileLoader;
-        this.dataFileLoader = dataFileLoader;
+        this.configLoader = configLoader;
+        this.languageLoader = languageLoader;
+        this.dataLoader = dataLoader;
         this.miniMessage = miniMessage;
         this.plugin = plugin;
         this.logger = logger;
@@ -64,7 +64,7 @@ public class PlayerActivityListener {
         String playerName = player.getUsername();
 
         // 检查是否为首次登录
-        boolean isFirstLogin = dataFileLoader.getPlayerData(uuid) == null;
+        boolean isFirstLogin = dataLoader.getPlayerData(uuid) == null;
 
         // 根据是否首次登录发送不同消息
         String messageKey = isFirstLogin ? "player_activity.first_join" : "player_activity.join";
@@ -94,21 +94,21 @@ public class PlayerActivityListener {
         playerCurrentServers.put(uuid, serverName);
 
         // 更新玩家数据
-        dataFileLoader.updatePlayerOnLogin(uuid, playerName);
+        dataLoader.updatePlayerOnLogin(uuid, playerName);
 
         // 更新历史峰值在线人数
         int currentOnlineCount = proxyServer.getPlayerCount();
-        dataFileLoader.updateHistoricalPeakOnline(currentOnlineCount);
+        dataLoader.updateHistoricalPeakOnline(currentOnlineCount);
 
         // 更新子服务器峰值在线人数
         int serverOnlineCount = event.getServer().getPlayersConnected().size() + 1; // +1是因为玩家即将连接
-        dataFileLoader.updateSubServerPeakOnline(serverName, serverOnlineCount);
+        dataLoader.updateSubServerPeakOnline(serverName, serverOnlineCount);
 
         // 处理玩家首次连接的情况
         Optional<RegisteredServer> previousServer = event.getPreviousServer();
         if (!previousServer.isPresent()) {
             // 如果没有前一个服务器，说明是首次连接，需要记录路径
-            dataFileLoader.updatePlayerServerLogin(uuid, serverName);
+            dataLoader.updatePlayerServerLogin(uuid, serverName);
         }
     }
 
@@ -127,7 +127,7 @@ public class PlayerActivityListener {
 
         // 使用配置的显示名称来发送消息，并添加500ms延迟
         String disconnectedServerName = playerCurrentServers.get(uuid);
-        String displayServerName = disconnectedServerName != null ? configFileLoader.getServerDisplayName(disconnectedServerName) : null;
+        String displayServerName = disconnectedServerName != null ? configLoader.getServerDisplayName(disconnectedServerName) : null;
 
         plugin.getProxyServer().getScheduler().buildTask(plugin, () -> {
             sendPlayerActivityMessage(playerName, "player_activity.quit", displayServerName, null);
@@ -154,11 +154,11 @@ public class PlayerActivityListener {
             sessionDuration = Duration.between(loginTime, LocalDateTime.now());
         }
 
-        dataFileLoader.updatePlayerOnQuit(uuid, playerName, disconnectedServerName, sessionDuration);
+        dataLoader.updatePlayerOnQuit(uuid, playerName, disconnectedServerName, sessionDuration);
 
         // 更新历史峰值在线人数（玩家退出后）
         int currentOnlineCount = proxyServer.getPlayerCount();
-        dataFileLoader.updateHistoricalPeakOnline(currentOnlineCount);
+        dataLoader.updateHistoricalPeakOnline(currentOnlineCount);
     }
 
     /**
@@ -179,8 +179,8 @@ public class PlayerActivityListener {
             // 添加500ms延迟后发送消息
             plugin.getProxyServer().getScheduler().buildTask(plugin, () -> {
                 sendPlayerActivityMessage(playerName, "player_activity.switch",
-                        configFileLoader.getServerDisplayName(previousServer.get().getServerInfo().getName()),
-                        configFileLoader.getServerDisplayName(serverName));
+                        configLoader.getServerDisplayName(previousServer.get().getServerInfo().getName()),
+                        configLoader.getServerDisplayName(serverName));
             }).delay(500, TimeUnit.MILLISECONDS).schedule();
         }
     }
@@ -200,15 +200,15 @@ public class PlayerActivityListener {
         Optional<RegisteredServer> previousServer = event.getPreviousServer();
         if (previousServer.isPresent()) {
             // 只有在玩家切换服务器时才更新服务器登录数据
-            dataFileLoader.updatePlayerServerLogin(uuid, serverName);
+            dataLoader.updatePlayerServerLogin(uuid, serverName);
 
             // 更新历史峰值在线人数
             int currentOnlineCount = proxyServer.getPlayerCount();
-            dataFileLoader.updateHistoricalPeakOnline(currentOnlineCount);
+            dataLoader.updateHistoricalPeakOnline(currentOnlineCount);
 
             // 更新子服务器峰值在线人数
             int serverOnlineCount = event.getServer().getPlayersConnected().size() + 1; // +1是因为玩家即将连接
-            dataFileLoader.updateSubServerPeakOnline(serverName, serverOnlineCount);
+            dataLoader.updateSubServerPeakOnline(serverName, serverOnlineCount);
         }
     }
 
@@ -224,7 +224,7 @@ public class PlayerActivityListener {
         // 调度任务以避免在事件线程中执行耗时操作，同时允许Velocity处理其他事件。
         // 此处的lambda表达式包含多条语句和局部变量引用，不适合直接替换为方法引用。
         plugin.getProxyServer().getScheduler().buildTask(plugin, () -> {
-            String message = languageFileLoader.getMessage(messageKey);
+            String message = languageLoader.getMessage(messageKey);
             // 检查消息是否存在且未缺失
             if (message != null && !message.isEmpty() && !message.startsWith("<red>Missing Language Key:")) {
                 String formattedMessage = message.replace("{player}", playerName);

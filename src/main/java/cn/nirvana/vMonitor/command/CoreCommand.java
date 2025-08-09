@@ -1,10 +1,10 @@
 package cn.nirvana.vMonitor.command;
 
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 import cn.nirvana.vMonitor.command_module.HelpModule;
 import cn.nirvana.vMonitor.util.CommandUtil;
 
-import com.mojang.brigadier.builder.LiteralArgumentBuilder; // 导入 LiteralArgumentBuilder
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import com.velocitypowered.api.command.CommandSource;
 
@@ -18,14 +18,14 @@ import java.util.function.Consumer;
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
 public class CoreCommand {
-    private final LanguageFileLoader languageFileLoader;
+    private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
     private final CommandUtil commandUtil;
     private final HelpModule helpModule;
 
-    public CoreCommand(LanguageFileLoader languageFileLoader, MiniMessage miniMessage,
+    public CoreCommand(LanguageLoader languageLoader, MiniMessage miniMessage,
                        CommandUtil commandUtil, HelpModule helpModule) {
-        this.languageFileLoader = languageFileLoader;
+        this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
         this.commandUtil = commandUtil;
         this.helpModule = helpModule;

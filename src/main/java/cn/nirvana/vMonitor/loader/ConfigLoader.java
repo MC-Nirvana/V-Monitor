@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.error.YAMLException;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -15,10 +14,9 @@ import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-public class ConfigFileLoader {
+public class ConfigLoader {
     private final Logger logger;
     private final Path dataDirectory;
     private final String configFileName = "config.yml";
@@ -26,7 +24,7 @@ public class ConfigFileLoader {
     private Map<String, Object> config;
     private Map<String, String> serverDisplayNames = new HashMap<>();
 
-    public ConfigFileLoader(Logger logger, Path dataDirectory) {
+    public ConfigLoader(Logger logger, Path dataDirectory) {
         this.logger = logger;
         this.dataDirectory = dataDirectory;
     }

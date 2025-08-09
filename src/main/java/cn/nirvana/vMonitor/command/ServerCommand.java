@@ -1,8 +1,8 @@
 package cn.nirvana.vMonitor.command;
 
 import cn.nirvana.vMonitor.VMonitor;
-import cn.nirvana.vMonitor.loader.ConfigFileLoader;
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.ConfigLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 import cn.nirvana.vMonitor.command_module.ServerInfoModule;
 import cn.nirvana.vMonitor.command_module.ServerListModule;
 import cn.nirvana.vMonitor.util.CommandUtil;
@@ -28,25 +28,25 @@ import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 public class ServerCommand {
     private final CommandUtil commandUtil;
     private final ProxyServer proxyServer;
-    private final LanguageFileLoader languageFileLoader;
+    private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
     private final ServerListModule serverListModule;
     private final ServerInfoModule serverInfoModule;
-    private final ConfigFileLoader configFileLoader;
+    private final ConfigLoader configLoader;
     private final HelpModule helpModule;
 
     public ServerCommand(CommandUtil commandUtil, ProxyServer proxyServer,
-                         LanguageFileLoader languageFileLoader, MiniMessage miniMessage,
+                         LanguageLoader languageLoader, MiniMessage miniMessage,
                          ServerListModule serverListModule, ServerInfoModule serverInfoModule,
-                         ConfigFileLoader configFileLoader, HelpModule helpModule,
+                         ConfigLoader configLoader, HelpModule helpModule,
                          VMonitor plugin) { // 添加 VMonitor 参数
         this.commandUtil = commandUtil;
         this.proxyServer = proxyServer;
-        this.languageFileLoader = languageFileLoader;
+        this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
         this.serverListModule = serverListModule;
         this.serverInfoModule = serverInfoModule;
-        this.configFileLoader = configFileLoader;
+        this.configLoader = configLoader;
         this.helpModule = helpModule;
         registerServerCommand();
     }
@@ -62,7 +62,7 @@ public class ServerCommand {
                             // 修改此处：不直接执行 executeListAll
                             .executes(context -> {
                                 // 提示用法
-                                String usage = languageFileLoader.getMessage("commands.server.usage.list");
+                                String usage = languageLoader.getMessage("commands.server.usage.list");
                                 context.getSource().sendMessage(miniMessage.deserialize(usage));
                                 return SINGLE_SUCCESS;
                             })
@@ -81,7 +81,7 @@ public class ServerCommand {
                     )
                     .then(LiteralArgumentBuilder.<CommandSource>literal("info")
                             .executes(context -> {
-                                String usage = languageFileLoader.getMessage("commands.server.usage.info");
+                                String usage = languageLoader.getMessage("commands.server.usage.info");
                                 context.getSource().sendMessage(miniMessage.deserialize(usage));
                                 return SINGLE_SUCCESS;
                             })

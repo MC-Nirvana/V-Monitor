@@ -1,30 +1,31 @@
 package cn.nirvana.vMonitor.command_module;
 
-import cn.nirvana.vMonitor.loader.DataFileLoader;
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.DataLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 import cn.nirvana.vMonitor.util.TimeUtil;
+
 import com.velocitypowered.api.command.CommandSource;
+
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import java.util.List;
 
 public class PlayerInfoModule {
-    private final DataFileLoader dataFileLoader;
-    private final LanguageFileLoader languageFileLoader;
+    private final DataLoader dataLoader;
+    private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
 
-    public PlayerInfoModule(DataFileLoader dataFileLoader, LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
-        this.dataFileLoader = dataFileLoader;
-        this.languageFileLoader = languageFileLoader;
+    public PlayerInfoModule(DataLoader dataLoader, LanguageLoader languageLoader, MiniMessage miniMessage) {
+        this.dataLoader = dataLoader;
+        this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
     }
 
     public void executePlayerInfo(CommandSource source, String playerName) {
         // 查找玩家数据
-        DataFileLoader.RootData rootData = dataFileLoader.getRootData();
-        DataFileLoader.PlayerData playerData = null;
+        DataLoader.RootData rootData = dataLoader.getRootData();
+        DataLoader.PlayerData playerData = null;
 
         // 遍历所有玩家数据查找匹配的玩家名
-        for (DataFileLoader.PlayerData player : rootData.playerData) {
+        for (DataLoader.PlayerData player : rootData.playerData) {
             if (player.username.equalsIgnoreCase(playerName)) {
                 playerData = player;
                 break;
@@ -33,14 +34,14 @@ public class PlayerInfoModule {
 
         // 如果未找到玩家数据
         if (playerData == null) {
-            String notFoundMessage = languageFileLoader.getMessage("commands.player.not_found")
+            String notFoundMessage = languageLoader.getMessage("commands.player.not_found")
                     .replace("{player}", playerName);
             source.sendMessage(miniMessage.deserialize(notFoundMessage));
             return;
         }
 
         // 获取语言文件中的玩家信息格式
-        String playerInfoFormat = languageFileLoader.getMessage("commands.player.info.format");
+        String playerInfoFormat = languageLoader.getMessage("commands.player.info.format");
 
         // 格式化玩家信息，只显示player_data中的基本信息
         String formattedMessage = playerInfoFormat

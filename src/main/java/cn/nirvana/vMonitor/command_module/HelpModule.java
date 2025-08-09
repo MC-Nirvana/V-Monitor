@@ -1,17 +1,17 @@
 package cn.nirvana.vMonitor.command_module;
 
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 
 import com.velocitypowered.api.command.CommandSource;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class HelpModule {
-    private final LanguageFileLoader languageFileLoader;
+    private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
 
-    public HelpModule(LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
-        this.languageFileLoader = languageFileLoader;
+    public HelpModule(LanguageLoader languageLoader, MiniMessage miniMessage) {
+        this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
     }
 
@@ -20,7 +20,7 @@ public class HelpModule {
      * @param source 命令发送者
      */
     public void executeHelp(CommandSource source) {
-        String helpMessage = languageFileLoader.getMessage("commands.help.all_format");
+        String helpMessage = languageLoader.getMessage("commands.help.all_format");
         if (helpMessage != null && !helpMessage.isEmpty() && !helpMessage.startsWith("<red>Missing Language Key:")) {
             source.sendMessage(miniMessage.deserialize(helpMessage));
         } else {
@@ -33,7 +33,7 @@ public class HelpModule {
      * @param source 命令发送者
      */
     public void executePluginHelp(CommandSource source) {
-        String helpMessage = languageFileLoader.getMessage("commands.help.plugin_format");
+        String helpMessage = languageLoader.getMessage("commands.help.plugin_format");
         if (helpMessage != null && !helpMessage.isEmpty() && !helpMessage.startsWith("<red>Missing Language Key:")) {
             source.sendMessage(miniMessage.deserialize(helpMessage));
         } else {
@@ -46,7 +46,7 @@ public class HelpModule {
      * @param source 命令发送者
      */
     public void executeServerHelp(CommandSource source) {
-        String helpMessage = languageFileLoader.getMessage("commands.help.server_format");
+        String helpMessage = languageLoader.getMessage("commands.help.server_format");
          if (helpMessage != null && !helpMessage.isEmpty() && !helpMessage.startsWith("<red>Missing Language Key:")) {
              source.sendMessage(miniMessage.deserialize(helpMessage));
          } else {
@@ -59,7 +59,7 @@ public class HelpModule {
      * @param source 命令发送者
      */
     public void executePlayerHelp(CommandSource source) {
-        String helpMessage = languageFileLoader.getMessage("commands.help.player_format");
+        String helpMessage = languageLoader.getMessage("commands.help.player_format");
         if (helpMessage != null && !helpMessage.isEmpty() && !helpMessage.startsWith("<red>Missing Language Key:")) {
             source.sendMessage(miniMessage.deserialize(helpMessage));
         } else {

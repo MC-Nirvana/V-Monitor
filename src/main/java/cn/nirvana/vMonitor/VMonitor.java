@@ -1,12 +1,11 @@
 package cn.nirvana.vMonitor;
 
 import cn.nirvana.vMonitor.command.*;
+import cn.nirvana.vMonitor.command_module.*;
+import cn.nirvana.vMonitor.exceptions.*;
+import cn.nirvana.vMonitor.listener.*;
 import cn.nirvana.vMonitor.loader.*;
-import cn.nirvana.vMonitor.listener.PlayerActivityListener;
-import cn.nirvana.vMonitor.command_module.*; // 导入所有新的模块类
-import cn.nirvana.vMonitor.util.CommandUtil; // 导入 CommandUtil
-import cn.nirvana.vMonitor.util.FileUtil; // 导入 FileUtil
-import cn.nirvana.vMonitor.exceptions.FileException; // 导入 FileException
+import cn.nirvana.vMonitor.util.*;
 
 import com.google.inject.Inject;
 
@@ -16,7 +15,7 @@ import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.plugin.PluginContainer; // 导入 PluginContainer
+import com.velocitypowered.api.plugin.PluginContainer;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
@@ -44,9 +43,9 @@ public class VMonitor {
     private final Path dataDirectory;
     private final PluginContainer pluginContainer; // 注入 PluginContainer
 
-    private ConfigFileLoader configFileLoader;
-    private LanguageFileLoader languageFileLoader;
-    private DataFileLoader dataFileLoader;
+    private ConfigLoader configLoader;
+    private LanguageLoader languageLoader;
+    private DataLoader dataLoader;
     private FileUtil fileUtil; // 新增 FileUtil 实例
 
     private MiniMessage miniMessage;
@@ -103,9 +102,9 @@ public class VMonitor {
         }
 
         // 初始化 loader
-        this.configFileLoader = new ConfigFileLoader(logger, dataDirectory);
-        this.languageFileLoader = new LanguageFileLoader(logger, dataDirectory, configFileLoader);
-        this.dataFileLoader = new DataFileLoader(logger, dataDirectory);
+        this.configLoader = new ConfigLoader(logger, dataDirectory);
+        this.languageLoader = new LanguageLoader(logger, dataDirectory, configLoader);
+        this.dataLoader = new DataLoader(logger, dataDirectory);
 
         // 文件路径（延迟构造 langPath）
         Path configPath = dataDirectory.resolve("config.yml");
@@ -114,14 +113,14 @@ public class VMonitor {
         // 1. 校验并加载 config.yml
         try {
             fileUtil.verifyFile(configPath, "config");
-            fileUtil.loadFile(configPath, "Config", configFileLoader, configFileLoader::loadConfig);
+            fileUtil.loadFile(configPath, "Config", configLoader, configLoader::loadConfig);
         } catch (FileException e) {
             logger.error("Config file verification or loading failed: {}", e.getMessage());
             try {
                 logger.warn("Repairing config.yml...");
                 fileUtil.repairFile(configPath, "config.yml", "config");
                 fileUtil.verifyFile(configPath, "config");
-                fileUtil.loadFile(configPath, "Config", configFileLoader, configFileLoader::loadConfig);
+                fileUtil.loadFile(configPath, "Config", configLoader, configLoader::loadConfig);
             } catch (FileException repairException) {
                 logger.error("Failed to repair config file: {}", repairException.getMessage());
                 throw new RuntimeException("Critical config error. Plugin cannot start.", repairException);
@@ -129,7 +128,7 @@ public class VMonitor {
         }
 
         // 2. 构造 langPath 并加载语言文件
-        String langKey = configFileLoader.getLanguageKey();
+        String langKey = configLoader.getLanguageKey();
         if (langKey == null || langKey.isEmpty()) {
             logger.error("Language key is missing or empty. This should not happen in production.");
             throw new RuntimeException("Critical config error: 'language.default' is missing or empty.");
@@ -139,14 +138,14 @@ public class VMonitor {
 
         try {
             fileUtil.verifyFile(langPath, "language");
-            fileUtil.loadFile(langPath, "Language", languageFileLoader, languageFileLoader::loadLanguage);
+            fileUtil.loadFile(langPath, "Language", languageLoader, languageLoader::loadLanguage);
         } catch (FileException e) {
             logger.error("Language file verification or loading failed: {}", e.getMessage());
             try {
                 logger.warn("Repairing language file...");
                 fileUtil.repairFile(langPath, "lang/" + langKey + ".yml", "language");
                 fileUtil.verifyFile(langPath, "language");
-                fileUtil.loadFile(langPath, "Language", languageFileLoader, languageFileLoader::loadLanguage);
+                fileUtil.loadFile(langPath, "Language", languageLoader, languageLoader::loadLanguage);
             } catch (FileException repairException) {
                 logger.error("Failed to repair language file: {}", repairException.getMessage());
                 throw new RuntimeException("Critical language file error. Plugin cannot start.", repairException);
@@ -156,14 +155,14 @@ public class VMonitor {
         // 3. 校验并加载 data.json
         try {
             fileUtil.verifyFile(dataPath, "data");
-            fileUtil.loadFile(dataPath, "Data", dataFileLoader, dataFileLoader::loadData);
+            fileUtil.loadFile(dataPath, "Data", dataLoader, dataLoader::loadData);
         } catch (FileException e) {
             logger.error("Data file verification or loading failed: {}", e.getMessage());
             try {
                 logger.warn("Repairing data.json...");
                 fileUtil.repairFile(dataPath, "data.json", "data");
                 fileUtil.verifyFile(dataPath, "data");
-                fileUtil.loadFile(dataPath, "Data", dataFileLoader, dataFileLoader::loadData);
+                fileUtil.loadFile(dataPath, "Data", dataLoader, dataLoader::loadData);
             } catch (FileException repairException) {
                 logger.error("Failed to repair data file: {}", repairException.getMessage());
                 throw new RuntimeException("Critical data file error. Plugin cannot start.", repairException);
@@ -171,33 +170,33 @@ public class VMonitor {
         }
 
         // 注册事件监听器
-        proxyServer.getEventManager().register(this, new PlayerActivityListener(proxyServer, configFileLoader, languageFileLoader, dataFileLoader, miniMessage, this, logger));
+        proxyServer.getEventManager().register(this, new PlayerActivityListener(proxyServer, configLoader, languageLoader, dataLoader, miniMessage, this, logger));
 
         // 初始化并注册命令
         CommandUtil commandUtil = new CommandUtil(proxyServer.getCommandManager(), logger, pluginContainer);
 
         // 初始化命令模块
-        HelpModule helpModule = new HelpModule(languageFileLoader, miniMessage);
-        PlayerInfoModule playerInfoModule = new PlayerInfoModule(dataFileLoader, languageFileLoader, miniMessage);
-        PlayerSwitchModule playerSwitchModule = new PlayerSwitchModule(dataFileLoader, languageFileLoader, miniMessage);
-        PluginListModule pluginListModule = new PluginListModule(proxyServer, languageFileLoader, miniMessage);
-        PluginInfoModule pluginInfoModule = new PluginInfoModule(proxyServer, languageFileLoader, miniMessage);
-        ServerListModule serverListModule = new ServerListModule(proxyServer, configFileLoader, languageFileLoader, miniMessage);
-        ServerInfoModule serverInfoModule = new ServerInfoModule(proxyServer, languageFileLoader, miniMessage, configFileLoader, this);
-        ReloadModule reloadModule = new ReloadModule(configFileLoader, languageFileLoader, miniMessage);
+        HelpModule helpModule = new HelpModule(languageLoader, miniMessage);
+        PlayerInfoModule playerInfoModule = new PlayerInfoModule(dataLoader, languageLoader, miniMessage);
+        PlayerSwitchModule playerSwitchModule = new PlayerSwitchModule(dataLoader, languageLoader, miniMessage);
+        PluginListModule pluginListModule = new PluginListModule(proxyServer, languageLoader, miniMessage);
+        PluginInfoModule pluginInfoModule = new PluginInfoModule(proxyServer, languageLoader, miniMessage);
+        ServerListModule serverListModule = new ServerListModule(proxyServer, configLoader, languageLoader, miniMessage);
+        ServerInfoModule serverInfoModule = new ServerInfoModule(proxyServer, languageLoader, miniMessage, configLoader, this);
+        ReloadModule reloadModule = new ReloadModule(configLoader, languageLoader, miniMessage);
 
         // 注册命令
-        new CoreCommand(languageFileLoader, miniMessage, commandUtil, helpModule);
+        new CoreCommand(languageLoader, miniMessage, commandUtil, helpModule);
         new HelpCommand(commandUtil, helpModule);
-        new PlayerCommand(commandUtil, languageFileLoader, miniMessage, playerInfoModule, helpModule, dataFileLoader, playerSwitchModule);
-        new PluginCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, pluginListModule, pluginInfoModule, helpModule);
-        new ServerCommand(commandUtil, proxyServer, languageFileLoader, miniMessage, serverListModule, serverInfoModule, configFileLoader, helpModule, this);
+        new PlayerCommand(commandUtil, languageLoader, miniMessage, playerInfoModule, helpModule, dataLoader, playerSwitchModule);
+        new PluginCommand(commandUtil, proxyServer, languageLoader, miniMessage, pluginListModule, pluginInfoModule, helpModule);
+        new ServerCommand(commandUtil, proxyServer, languageLoader, miniMessage, serverListModule, serverInfoModule, configLoader, helpModule, this);
         new ReloadCommand(commandUtil, reloadModule);
-        new VersionCommand(commandUtil, new VersionModule(languageFileLoader, miniMessage));
+        new VersionCommand(commandUtil, new VersionModule(languageLoader, miniMessage));
         commandUtil.registerAllCommands();
 
         // 保存数据文件
-        dataFileLoader.savePlayerData();
+        dataLoader.savePlayerData();
 
         logger.info("V-Monitor plugin enabled!");
     }
@@ -207,26 +206,26 @@ public class VMonitor {
     public void onProxyShutdown(ProxyShutdownEvent event) {
         // 在关服时执行数据保存操作，确保所有玩家数据和统计信息都已持久化
         logger.info("V-Monitor plugin is shutting down. Saving player data...");
-        if (dataFileLoader != null) {
-            dataFileLoader.savePlayerData();
+        if (dataLoader != null) {
+            dataLoader.savePlayerData();
             logger.info("Player data saved successfully.");
         } else {
-            logger.warn("DataFileLoader was not initialized. Player data may not have been saved.");
+            logger.warn("DataLoader was not initialized. Player data may not have been saved.");
         }
         logger.info("V-Monitor plugin disabled.");
     }
 
     // 提供一些公共访问器
-    public ConfigFileLoader getConfigFileLoader() {
-        return configFileLoader;
+    public ConfigLoader getConfigFileLoader() {
+        return configLoader;
     }
 
-    public LanguageFileLoader getLanguageLoader() {
-        return languageFileLoader;
+    public LanguageLoader getLanguageLoader() {
+        return languageLoader;
     }
 
-    public DataFileLoader getPlayerDataLoader() {
-        return dataFileLoader;
+    public DataLoader getPlayerDataLoader() {
+        return dataLoader;
     }
 
     public Logger getLogger() {

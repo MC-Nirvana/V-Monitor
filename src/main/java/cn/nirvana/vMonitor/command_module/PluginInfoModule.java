@@ -1,6 +1,6 @@
 package cn.nirvana.vMonitor.command_module;
 
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.plugin.PluginContainer;
@@ -16,12 +16,12 @@ import java.util.stream.Collectors;
 
 public class PluginInfoModule {
     private final ProxyServer proxyServer;
-    private final LanguageFileLoader languageFileLoader;
+    private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
 
-    public PluginInfoModule(ProxyServer proxyServer, LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
+    public PluginInfoModule(ProxyServer proxyServer, LanguageLoader languageLoader, MiniMessage miniMessage) {
         this.proxyServer = proxyServer;
-        this.languageFileLoader = languageFileLoader;
+        this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
     }
 
@@ -31,29 +31,29 @@ public class PluginInfoModule {
                 .collect(Collectors.toList());
 
         if (plugins.isEmpty()) {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.plugin.empty_list")));
+            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.plugin.empty_list")));
             return;
         }
 
         StringBuilder pluginInfoList = new StringBuilder();
 
         // 获取插件信息格式字符串
-        String pluginInfoFormat = languageFileLoader.getMessage("commands.plugin.info.format");
+        String pluginInfoFormat = languageLoader.getMessage("commands.plugin.info.format");
 
         // 获取 all_header
-        String allPluginsHeader = languageFileLoader.getMessage("commands.plugin.info.all_header");
+        String allPluginsHeader = languageLoader.getMessage("commands.plugin.info.all_header");
 
         for (PluginContainer plugin : plugins) {
             PluginDescription description = plugin.getDescription();
 
             String id = description.getId();
             String name = description.getName().orElse(id);
-            String version = description.getVersion().orElse(languageFileLoader.getMessage("commands.plugin.info.no_version"));
-            String url = description.getUrl().orElse(languageFileLoader.getMessage("commands.plugin.info.no_url"));
-            String desc = description.getDescription().orElse(languageFileLoader.getMessage("commands.plugin.info.no_description"));
+            String version = description.getVersion().orElse(languageLoader.getMessage("commands.plugin.info.no_version"));
+            String url = description.getUrl().orElse(languageLoader.getMessage("commands.plugin.info.no_url"));
+            String desc = description.getDescription().orElse(languageLoader.getMessage("commands.plugin.info.no_description"));
             String authors = String.join(", ", description.getAuthors());
             if (authors.isEmpty()) {
-                authors = languageFileLoader.getMessage("commands.plugin.info.no_authors");
+                authors = languageLoader.getMessage("commands.plugin.info.no_authors");
             }
 
             String pluginEntry = pluginInfoFormat
@@ -80,14 +80,14 @@ public class PluginInfoModule {
             PluginDescription description = plugin.get().getDescription();
             String id = description.getId();
             String name = description.getName().orElse(id);
-            String version = description.getVersion().orElse(languageFileLoader.getMessage("commands.plugin.info.no_version"));
-            String url = description.getUrl().orElse(languageFileLoader.getMessage("commands.plugin.info.no_url"));
-            String desc = description.getDescription().orElse(languageFileLoader.getMessage("commands.plugin.info.no_description"));
+            String version = description.getVersion().orElse(languageLoader.getMessage("commands.plugin.info.no_version"));
+            String url = description.getUrl().orElse(languageLoader.getMessage("commands.plugin.info.no_url"));
+            String desc = description.getDescription().orElse(languageLoader.getMessage("commands.plugin.info.no_description"));
             String authors = String.join(", ", description.getAuthors());
             if (authors.isEmpty()) {
-                authors = languageFileLoader.getMessage("commands.plugin.info.no_authors");
+                authors = languageLoader.getMessage("commands.plugin.info.no_authors");
             }
-            String infoMessage = languageFileLoader.getMessage("commands.plugin.info.format")
+            String infoMessage = languageLoader.getMessage("commands.plugin.info.format")
                     .replace("{id}", id)
                     .replace("{name}", name)
                     .replace("{version}", version)
@@ -96,7 +96,7 @@ public class PluginInfoModule {
                     .replace("{authors}", authors);
             source.sendMessage(miniMessage.deserialize(infoMessage));
         } else {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.plugin.not_found").replace("{plugin}", pluginId)));
+            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.plugin.not_found").replace("{plugin}", pluginId)));
         }
     }
 }

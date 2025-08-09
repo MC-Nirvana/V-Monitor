@@ -1,10 +1,10 @@
 package cn.nirvana.vMonitor.command_module;
 
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.plugin.PluginContainer;
-import com.velocitypowered.api.plugin.PluginDescription; // 确保导入
+import com.velocitypowered.api.plugin.PluginDescription;
 import com.velocitypowered.api.proxy.ProxyServer;
 
 import net.kyori.adventure.text.Component;
@@ -18,12 +18,12 @@ import java.util.stream.Collectors;
 
 public class PluginListModule {
     private final ProxyServer proxyServer;
-    private final LanguageFileLoader languageFileLoader;
+    private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
 
-    public PluginListModule(ProxyServer proxyServer, LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
+    public PluginListModule(ProxyServer proxyServer, LanguageLoader languageLoader, MiniMessage miniMessage) {
         this.proxyServer = proxyServer;
-        this.languageFileLoader = languageFileLoader;
+        this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
     }
 
@@ -34,26 +34,26 @@ public class PluginListModule {
                 .collect(Collectors.toList());
 
         if (plugins.isEmpty()) {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.plugin.empty_list")));
+            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.plugin.empty_list")));
             return;
         }
 
         StringBuilder pluginEntries = new StringBuilder();
         // 获取语言文件中的格式字符串
-        String pluginListFormat = languageFileLoader.getMessage("commands.plugin.list.format");
-        String pluginLineFormat = languageFileLoader.getMessage("commands.plugin.list.plugin_line");
-        String pluginListHoverFormat = languageFileLoader.getMessage("commands.plugin.list.hover_format");
+        String pluginListFormat = languageLoader.getMessage("commands.plugin.list.format");
+        String pluginLineFormat = languageLoader.getMessage("commands.plugin.list.plugin_line");
+        String pluginListHoverFormat = languageLoader.getMessage("commands.plugin.list.hover_format");
 
         for (PluginContainer plugin : plugins) {
             PluginDescription description = plugin.getDescription();
             String id = description.getId();
             String name = description.getName().orElse(id);
-            String version = description.getVersion().orElse(languageFileLoader.getMessage("commands.plugin.list.no_veesion"));
-            String url = description.getUrl().orElse(languageFileLoader.getMessage("commands.plugin.list.no_url"));
-            String descriptionText = description.getDescription().orElse(languageFileLoader.getMessage("commands.plugin.list.no_description"));
+            String version = description.getVersion().orElse(languageLoader.getMessage("commands.plugin.list.no_veesion"));
+            String url = description.getUrl().orElse(languageLoader.getMessage("commands.plugin.list.no_url"));
+            String descriptionText = description.getDescription().orElse(languageLoader.getMessage("commands.plugin.list.no_description"));
             String authors = String.join(", ", description.getAuthors());
             if (authors.isEmpty()) {
-                authors = languageFileLoader.getMessage("commands.plugin.list.no_authors");
+                authors = languageLoader.getMessage("commands.plugin.list.no_authors");
             }
             String entryLine = pluginLineFormat
                     .replace("{plugin_name}", name)

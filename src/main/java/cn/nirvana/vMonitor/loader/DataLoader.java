@@ -19,29 +19,25 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonParseException;
 import org.slf4j.Logger;
 
-import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.WeekFields;
-import java.util.Locale;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.lang.reflect.Type;
 import java.util.List;
 import java.util.ArrayList;
 
-public class DataFileLoader {
+import java.lang.reflect.Type;
+
+public class DataLoader {
     private final Logger logger;
     private final Path dataDirectory;
     private final String playerDataFileName = "data.json";
@@ -429,7 +425,7 @@ public class DataFileLoader {
         }
     }
 
-    public DataFileLoader(Logger logger, Path dataDirectory) {
+    public DataLoader(Logger logger, Path dataDirectory) {
         this.logger = logger;
         this.dataDirectory = dataDirectory;
         this.playerDataFilePath = dataDirectory.resolve(playerDataFileName);

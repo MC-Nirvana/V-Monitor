@@ -1,18 +1,24 @@
 package cn.nirvana.vMonitor.util;
 
 import cn.nirvana.vMonitor.exceptions.FileException;
+
 import org.slf4j.Logger;
+
 import org.yaml.snakeyaml.error.YAMLException;
+
 import com.google.gson.JsonSyntaxException;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+
 import java.util.function.Consumer;
 
 public class FileUtil {
@@ -81,7 +87,7 @@ public class FileUtil {
     /**
      * 泛型方法，用于安全地加载配置文件。
      *
-     * @param <T>                 Loader的类型 (例如 ConfigFileLoader, LanguageFileLoader)
+     * @param <T>                 Loader的类型 (例如 ConfigLoader, LanguageLoader)
      * @param targetFilePath      要加载的文件路径
      * @param fileType            文件类型描述（用于日志信息）
      * @param loaderInstance      Loader的实例（例如 configFileLoader, languageFileLoader）

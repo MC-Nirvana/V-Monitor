@@ -1,8 +1,8 @@
 package cn.nirvana.vMonitor.command_module;
 
 import cn.nirvana.vMonitor.VMonitor;
-import cn.nirvana.vMonitor.loader.ConfigFileLoader;
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.ConfigLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 import cn.nirvana.vMonitor.util.TimeUtil;
 
 import com.velocitypowered.api.command.CommandSource;
@@ -16,6 +16,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -23,16 +24,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ServerInfoModule {
     private final ProxyServer proxyServer;
-    private final LanguageFileLoader languageFileLoader;
+    private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
-    private final ConfigFileLoader configFileLoader;
+    private final ConfigLoader configLoader;
     private final VMonitor plugin;
 
-    public ServerInfoModule(ProxyServer proxyServer, LanguageFileLoader languageFileLoader, MiniMessage miniMessage, ConfigFileLoader configFileLoader, VMonitor plugin) {
+    public ServerInfoModule(ProxyServer proxyServer, LanguageLoader languageLoader, MiniMessage miniMessage, ConfigLoader configLoader, VMonitor plugin) {
         this.proxyServer = proxyServer;
-        this.languageFileLoader = languageFileLoader;
+        this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
-        this.configFileLoader = configFileLoader;
+        this.configLoader = configLoader;
         this.plugin = plugin;
     }
 
@@ -40,40 +41,40 @@ public class ServerInfoModule {
         Optional<RegisteredServer> serverOptional = proxyServer.getServer(serverNameArg);
         if (serverOptional.isPresent()) {
             RegisteredServer server = serverOptional.get();
-            String serverDisplayName = configFileLoader.getServerDisplayName(server.getServerInfo().getName());
+            String serverDisplayName = configLoader.getServerDisplayName(server.getServerInfo().getName());
 
             server.ping()
                     .thenAccept(ping -> {
                         String onlinePlayers = String.valueOf(ping.getPlayers().map(ServerPing.Players::getOnline).orElse(0));
                         String maxPlayers = String.valueOf(ping.getPlayers().map(ServerPing.Players::getMax).orElse(0));
-                        String status = languageFileLoader.getMessage("commands.server.info.status_online");
+                        String status = languageLoader.getMessage("commands.server.info.status_online");
                         String motd = PlainTextComponentSerializer.plainText().serialize(ping.getDescriptionComponent());
 
 
-                        String infoMessage = languageFileLoader.getMessage("commands.server.info.specific_format")
+                        String infoMessage = languageLoader.getMessage("commands.server.info.specific_format")
                                 .replace("{server_name}", serverNameArg)
                                 .replace("{server_display_name}", serverDisplayName)
                                 .replace("{version}", Optional.ofNullable(ping.getVersion())
                                         .map(ServerPing.Version::getName)
-                                        .orElse(languageFileLoader.getMessage("commands.server.info.no_version")))
+                                        .orElse(languageLoader.getMessage("commands.server.info.no_version")))
                                 .replace("{status}", status)
                                 .replace("{online_players}", onlinePlayers)
                                 .replace("{motd}", motd);
                         source.sendMessage(miniMessage.deserialize(infoMessage));
                     })
                     .exceptionally(throwable -> {
-                        String infoMessage = languageFileLoader.getMessage("commands.server.info.specific_format")
+                        String infoMessage = languageLoader.getMessage("commands.server.info.specific_format")
                                 .replace("{server_name}", serverNameArg)
                                 .replace("{server_display_name}", serverDisplayName)
-                                .replace("{version}", languageFileLoader.getMessage("commands.server.info.no_version"))
-                                .replace("{status}", languageFileLoader.getMessage("commands.server.info.status_offline"))
-                                .replace("{online_players}", languageFileLoader.getMessage("commands.server.info.no_players"))
-                                .replace("{motd}", languageFileLoader.getMessage("commands.server.info.no_motd"));
+                                .replace("{version}", languageLoader.getMessage("commands.server.info.no_version"))
+                                .replace("{status}", languageLoader.getMessage("commands.server.info.status_offline"))
+                                .replace("{online_players}", languageLoader.getMessage("commands.server.info.no_players"))
+                                .replace("{motd}", languageLoader.getMessage("commands.server.info.no_motd"));
                         source.sendMessage(miniMessage.deserialize(infoMessage));
                         return null;
                     });
         } else {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.info.not_found").replace("{server}", serverNameArg)));
+            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.info.not_found").replace("{server}", serverNameArg)));
         }
     }
 
@@ -81,7 +82,7 @@ public class ServerInfoModule {
         List<RegisteredServer> servers = proxyServer.getAllServers().stream().toList();
 
         if (servers.isEmpty()) {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.info.no_servers")));
+            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.info.no_servers")));
             return;
         }
 
@@ -90,20 +91,20 @@ public class ServerInfoModule {
         AtomicInteger runningServersCount = new AtomicInteger(0);
         AtomicInteger offlineServersCount = new AtomicInteger(0);
 
-        String serverStatusFormat = languageFileLoader.getMessage("commands.server.info.server_status_list_format");
+        String serverStatusFormat = languageLoader.getMessage("commands.server.info.server_status_list_format");
 
         // 解决：未检查的赋值警告
         @SuppressWarnings("unchecked")
         CompletableFuture<Void>[] futures = servers.stream()
                 .map(server -> server.ping()
                         .thenAccept(ping -> {
-                            String serverDisplayName = configFileLoader.getServerDisplayName(server.getServerInfo().getName());
+                            String serverDisplayName = configLoader.getServerDisplayName(server.getServerInfo().getName());
                             totalOnlinePlayers.addAndGet(ping.getPlayers().map(ServerPing.Players::getOnline).orElse(0));
                             runningServersCount.incrementAndGet();
 
                             String onlinePlayers = String.valueOf(ping.getPlayers().map(ServerPing.Players::getOnline).orElse(0));
                             String maxPlayers = String.valueOf(ping.getPlayers().map(ServerPing.Players::getMax).orElse(0));
-                            String status = languageFileLoader.getMessage("commands.server.info.status_online");
+                            String status = languageLoader.getMessage("commands.server.info.status_online");
 
                             String currentServerLine = serverStatusFormat
                                     .replace("{server_name}", server.getServerInfo().getName())
@@ -114,13 +115,13 @@ public class ServerInfoModule {
                             serverStatusList.append(miniMessage.serialize(miniMessage.deserialize(currentServerLine))).append("\n");
                         })
                         .exceptionally(throwable -> {
-                            String serverDisplayName = configFileLoader.getServerDisplayName(server.getServerInfo().getName());
+                            String serverDisplayName = configLoader.getServerDisplayName(server.getServerInfo().getName());
                             offlineServersCount.incrementAndGet();
                             String currentServerLine = serverStatusFormat
                                     .replace("{server_name}", server.getServerInfo().getName())
                                     .replace("{server_display_name}", serverDisplayName)
-                                    .replace("{status}", languageFileLoader.getMessage("commands.server.info.status_offline"))
-                                    .replace("{online_players}", languageFileLoader.getMessage("commands.server.info.no_players"));
+                                    .replace("{status}", languageLoader.getMessage("commands.server.info.status_offline"))
+                                    .replace("{online_players}", languageLoader.getMessage("commands.server.info.no_players"));
                             serverStatusList.append(miniMessage.serialize(miniMessage.deserialize(currentServerLine))).append("\n");
                             return null;
                         })
@@ -132,7 +133,7 @@ public class ServerInfoModule {
 
                     // 获取开服时间和运行时间
                     String serverStartTime = "Unknown";
-                    String serverUptime = languageFileLoader.getMessage("global.unknown_info");
+                    String serverUptime = languageLoader.getMessage("global.unknown_info");
 
                     try {
                         // 从DataFileLoader获取开服时间
@@ -159,29 +160,29 @@ public class ServerInfoModule {
                                     long uptimeDays = java.time.temporal.ChronoUnit.DAYS.between(bootDateTime, currentDateTime);
 
                                     if (uptimeDays <= 0) {
-                                        serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_same_day");
+                                        serverUptime = languageLoader.getMessage("commands.server.info.uptime_same_day");
                                     } else {
-                                        serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_days")
+                                        serverUptime = languageLoader.getMessage("commands.server.info.uptime_days")
                                                 .replace("{days}", String.valueOf(uptimeDays));
                                     }
                                 } else {
-                                    serverUptime = languageFileLoader.getMessage("commands.server.info.uptime_same_day");
+                                    serverUptime = languageLoader.getMessage("commands.server.info.uptime_same_day");
                                 }
                             } catch (Exception e) {
                                 // 如果计算运行时间出现异常，使用默认值
-                                serverUptime = languageFileLoader.getMessage("global.unknown_info");
+                                serverUptime = languageLoader.getMessage("global.unknown_info");
                             }
                         }
                     } catch (Exception e) {
                         // 如果出现任何异常，使用默认值
-                        serverStartTime = languageFileLoader.getMessage("global.unknown_info");
-                        serverUptime = languageFileLoader.getMessage("global.unknown_info");
+                        serverStartTime = languageLoader.getMessage("global.unknown_info");
+                        serverUptime = languageLoader.getMessage("global.unknown_info");
                     }
 
                     // 从配置文件获取服务器名称
-                    String serverName = configFileLoader.getServerName();
+                    String serverName = configLoader.getServerName();
 
-                    String allFormat = languageFileLoader.getMessage("commands.server.info.all_format")
+                    String allFormat = languageLoader.getMessage("commands.server.info.all_format")
                             .replace("{proxy_version}", proxyVersion)
                             .replace("{total_player}", String.valueOf(totalOnlinePlayers.get()))
                             .replace("{server_count}", String.valueOf(servers.size()))

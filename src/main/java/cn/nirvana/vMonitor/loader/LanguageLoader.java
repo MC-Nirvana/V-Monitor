@@ -16,18 +16,18 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
-public class LanguageFileLoader {
+public class LanguageLoader {
     private final Logger logger;
     private final Path dataDirectory;
-    private final ConfigFileLoader configFileLoader;
+    private final ConfigLoader configLoader;
     private final String langFolderName = "lang";
 
     private Map<String, Object> language;
 
-    public LanguageFileLoader(Logger logger, Path dataDirectory, ConfigFileLoader configFileLoader) {
+    public LanguageLoader(Logger logger, Path dataDirectory, ConfigLoader configLoader) {
         this.logger = logger;
         this.dataDirectory = dataDirectory;
-        this.configFileLoader = configFileLoader;
+        this.configLoader = configLoader;
     }
 
     /**
@@ -53,7 +53,7 @@ public class LanguageFileLoader {
      * 获取语言文件路径。
      */
     private Path getLanguageFilePath() {
-        String configuredLang = configFileLoader.getLanguageKey();
+        String configuredLang = configLoader.getLanguageKey();
         String langFileName = configuredLang + ".yml";
         return dataDirectory.resolve(langFolderName).resolve(langFileName);
     }

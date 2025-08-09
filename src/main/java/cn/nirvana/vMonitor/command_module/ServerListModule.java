@@ -1,7 +1,7 @@
 package cn.nirvana.vMonitor.command_module;
 
-import cn.nirvana.vMonitor.loader.ConfigFileLoader;
-import cn.nirvana.vMonitor.loader.LanguageFileLoader;
+import cn.nirvana.vMonitor.loader.ConfigLoader;
+import cn.nirvana.vMonitor.loader.LanguageLoader;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
@@ -17,36 +17,36 @@ import java.util.stream.Collectors;
 
 public class ServerListModule {
     private final ProxyServer proxyServer;
-    private final ConfigFileLoader configFileLoader;
-    private final LanguageFileLoader languageFileLoader;
+    private final ConfigLoader configLoader;
+    private final LanguageLoader languageLoader;
     private final MiniMessage miniMessage;
 
-    public ServerListModule(ProxyServer proxyServer, ConfigFileLoader configFileLoader, LanguageFileLoader languageFileLoader, MiniMessage miniMessage) {
+    public ServerListModule(ProxyServer proxyServer, ConfigLoader configLoader, LanguageLoader languageLoader, MiniMessage miniMessage) {
         this.proxyServer = proxyServer;
-        this.configFileLoader = configFileLoader;
-        this.languageFileLoader = languageFileLoader;
+        this.configLoader = configLoader;
+        this.languageLoader = languageLoader;
         this.miniMessage = miniMessage;
     }
 
     public void executeListAll(CommandSource source) {
         Collection<RegisteredServer> servers = proxyServer.getAllServers();
         if (servers.isEmpty()) {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.list.no_servers")));
+            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.list.no_servers")));
             return;
         }
 
         StringBuilder serverListContent = new StringBuilder();
         int totalPlayers = 0;
-        String lineFormat = languageFileLoader.getMessage("commands.server.list.all_line_format");
+        String lineFormat = languageLoader.getMessage("commands.server.list.all_line_format");
 
         for (RegisteredServer server : servers) {
-            String serverDisplayName = configFileLoader.getServerDisplayName(server.getServerInfo().getName());
+            String serverDisplayName = configLoader.getServerDisplayName(server.getServerInfo().getName());
             Collection<Player> players = server.getPlayersConnected();
             totalPlayers += players.size();
 
             String playersListContent;
             if (players.isEmpty()) {
-                playersListContent = languageFileLoader.getMessage("commands.server.list.no_players");
+                playersListContent = languageLoader.getMessage("commands.server.list.no_players");
             } else {
                 playersListContent = players.stream()
                         .sorted(Comparator.comparing(Player::getUsername))
@@ -61,7 +61,7 @@ public class ServerListModule {
             ).append("\n");
         }
 
-        String allFormat = languageFileLoader.getMessage("commands.server.list.all_format")
+        String allFormat = languageLoader.getMessage("commands.server.list.all_format")
                 .replace("{online_players_count}", String.valueOf(totalPlayers))
                 .replace("{all_players_list}", serverListContent.toString().trim());
 
@@ -72,26 +72,26 @@ public class ServerListModule {
         Optional<RegisteredServer> serverOptional = proxyServer.getServer(serverNameArg);
         if (serverOptional.isPresent()) {
             RegisteredServer server = serverOptional.get();
-            String serverDisplayName = configFileLoader.getServerDisplayName(server.getServerInfo().getName());
+            String serverDisplayName = configLoader.getServerDisplayName(server.getServerInfo().getName());
             Collection<Player> players = server.getPlayersConnected();
 
             String specificPlayersListContent;
             if (players.isEmpty()) {
-                specificPlayersListContent = "<red>" + languageFileLoader.getMessage("commands.server.list.no_players") + "</red>";
+                specificPlayersListContent = "<red>" + languageLoader.getMessage("commands.server.list.no_players") + "</red>";
             } else {
                 specificPlayersListContent = "<green>" + players.stream()
                         .sorted(Comparator.comparing(Player::getUsername))
                         .map(Player::getUsername)
                         .collect(Collectors.joining(", ")) + "</green>";
             }
-            String specificFormat = languageFileLoader.getMessage("commands.server.list.specific_format")
+            String specificFormat = languageLoader.getMessage("commands.server.list.specific_format")
                     .replace("{server_display_name}", serverDisplayName)
                     .replace("{online_players_number}", String.valueOf(players.size()))
                     .replace("{specific_players_list}", specificPlayersListContent);
             source.sendMessage(miniMessage.deserialize(specificFormat));
 
         } else {
-            source.sendMessage(miniMessage.deserialize(languageFileLoader.getMessage("commands.server.not_found").replace("{server}", serverNameArg)));
+            source.sendMessage(miniMessage.deserialize(languageLoader.getMessage("commands.server.not_found").replace("{server}", serverNameArg)));
         }
     }
 }
