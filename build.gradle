@@ -14,18 +14,40 @@ version = findProperty('version')
 
 // 仓库配置
 repositories {
-    // Maven 中央仓库
-    mavenCentral()
-    //  Paper 仓库
+    // 阿里云中央仓库
+    maven {
+        name = "aliyun-central"
+        url = "https://maven.aliyun.com/repository/central"
+    }
+    // 阿里云公共仓库
+    maven {
+        name = "aliyun-public"
+        url = "https://maven.aliyun.com/repository/public"
+    }
+    // 阿里云gradle插件仓库
+    maven {
+        name = "aliyun-gradle-plugin"
+        url = "https://maven.aliyun.com/repository/gradle-plugin"
+    }
+    // 阿里云apache快照仓库
+    maven {
+        name = "aliyun-apache-snapshots"
+        url = "https://maven.aliyun.com/repository/apache-snapshots"
+    }
+    //  Paper仓库
     maven {
         name = "papermc-repo"
         url = "https://repo.papermc.io/repository/maven-public/"
     }
-    // Sonatype 仓库
+    // Sonatype仓库
     maven {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
+    // Maven中央仓库
+    mavenCentral()
+    // Maven本地仓库
+    mavenLocal()
 }
 
 // 依赖配置
