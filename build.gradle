@@ -24,16 +24,6 @@ repositories {
         name = "aliyun-public"
         url = "https://maven.aliyun.com/repository/public"
     }
-    // 阿里云gradle插件仓库
-    maven {
-        name = "aliyun-gradle-plugin"
-        url = "https://maven.aliyun.com/repository/gradle-plugin"
-    }
-    // 阿里云apache快照仓库
-    maven {
-        name = "aliyun-apache-snapshots"
-        url = "https://maven.aliyun.com/repository/apache-snapshots"
-    }
     //  Paper仓库
     maven {
         name = "papermc-repo"
@@ -67,14 +57,14 @@ tasks {
 
     // Velocity 运行配置
     runVelocity {
-        velocityVersion(findProperty('velocityVersion'))
+        velocityVersion(findProperty('velocityVersion').toString())
     }
 
     // ShadowJar 打包配置
     shadowJar {
         archiveBaseName.set('V-Monitor')
         archiveClassifier.set('')
-        archiveVersion.set(project.version)
+        archiveVersion.set(project.version.toString())
         configurations = [project.configurations.runtimeClasspath]
         relocate 'com.zaxxer.hikari', 'cn.nirvana.vMonitor.libs.hikari'
     }
@@ -86,7 +76,7 @@ tasks {
 }
 
 // ========== Java 相关配置 ==========
-def targetJavaVersion = Integer.parseInt(findProperty('targetJavaVersion')) // Java版本配置
+def targetJavaVersion = Integer.parseInt(findProperty('targetJavaVersion').toString()) // Java版本配置
 
 // Java工具链配置
 java {
