@@ -1,4 +1,5 @@
-- [中文版](./README.md)
+- [简体中文版](./README.md)
+- 繁體中文版
 - [English version](./README_EN.md)
 
 # V-Monitor - 玩家活動与伺服器状态监控 Velocity 外掛

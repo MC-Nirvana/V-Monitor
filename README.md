@@ -1,5 +1,10 @@
-- [English version](./README_EN.md)
+- 简体中文版
 - [繁體中文版](./README_TW.md)
+- [English version](./README_EN.md)
+
+<p align="center">
+  <img src="v_monitor-logo.png" alt="V-Monitor Logo" width="128" height="128">
+</p>
 
 # V-Monitor - 玩家活动与服务器状态监控 Velocity 插件
 

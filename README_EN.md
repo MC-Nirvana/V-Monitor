@@ -1,5 +1,6 @@
-- [中文版](./README.md)
+- [简体中文版](./README.md)
 - [繁體中文版](./README_TW.md)
+- English version
 
 # V-Monitor - Player Activity & Server Status Monitor for Velocity
 
