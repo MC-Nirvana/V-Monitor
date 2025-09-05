@@ -2,6 +2,10 @@
 - 繁體中文版
 - [English version](./README_EN.md)
 
+<p align="center">
+  <img src="v_monitor-logo.png" alt="V-Monitor Logo" width="128" height="128">
+</p>
+
 # V-Monitor - 玩家活動与伺服器状态监控 Velocity 外掛
 
 [![GitHub release](https://img.shields.io/github/release/MC-Nirvana/V-Monitor.svg)](https://github.com/MC-Nirvana/V-Monitor/releases)
@@ -198,7 +202,7 @@ report:
 如果你希望支持本專案的持續开发和维护，可以通过以下方式贊助：
 
 - [面包多](https://mbd.pub/o/MC_Nirvana) - 通过面包多贊助（适用于中國大陸用户）
-- [PayPal](https://paypal.me/WHFNirvana) - 通过 PayPal 贊助（适用于國外用户）
+- [PayPal](https://paypal.me/WHFNirvana) - 通过 PayPal 贊助（适用于海外用户）
 
 您的贊助将用于：
 - 维护專案基础设施

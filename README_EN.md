@@ -2,6 +2,10 @@
 - [繁體中文版](./README_TW.md)
 - English version
 
+<p align="center">
+  <img src="v_monitor-logo.png" alt="V-Monitor Logo" width="128" height="128">
+</p>
+
 # V-Monitor - Player Activity & Server Status Monitor for Velocity
 
 [![GitHub release](https://img.shields.io/github/release/MC-Nirvana/V-Monitor.svg)](https://github.com/MC-Nirvana/V-Monitor/releases)
